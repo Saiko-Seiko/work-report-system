@@ -41,9 +41,12 @@ $config = [
     'login_max_fail' => 3,           // 3回エラーでロック（解除は事務局）
     'session_name'   => 'wcrsid',
     'debug'          => true,        // 本番では false
+    // 書き込み先。書き込めないサーバー（Vercel等）では config.vercel.php が /tmp に差し替える
     'storage'        => [
         'signatures' => APP_ROOT . '/data/signatures',
         'pdf'        => APP_ROOT . '/data/pdf',
+        'backups'    => APP_ROOT . '/data/backups',
+        'tmp'        => APP_ROOT . '/data/tmp',
     ],
     // メール送信（Phase 5）。本番はさくらのSMTPを使う
     'mail' => [
@@ -53,6 +56,11 @@ $config = [
         'dry_run'         => true,   // プロトタイプでは実送信しない
     ],
 ];
+
+// Vercel などの書き込めないサーバーで動かすとき（VERCEL は Vercel が自動で入れる目印）
+if (getenv('VERCEL') !== false && is_file(APP_ROOT . '/app/config.vercel.php')) {
+    $config = array_replace_recursive($config, require APP_ROOT . '/app/config.vercel.php');
+}
 
 if (is_file(APP_ROOT . '/app/config.local.php')) {
     $config = array_replace_recursive($config, require APP_ROOT . '/app/config.local.php');

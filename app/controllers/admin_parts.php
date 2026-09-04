@@ -278,7 +278,7 @@ function admin_parts_import(): void
 
     // 取り込む中身を一時ファイルに置き、実行のときに読み直す
     $token = bin2hex(random_bytes(12));
-    $dir   = APP_ROOT . '/data/tmp';
+    $dir   = (string) config('storage.tmp', APP_ROOT . '/data/tmp');
     if (!is_dir($dir)) {
         mkdir($dir, 0777, true);
     }
@@ -316,7 +316,7 @@ function admin_parts_import_apply(): void
         redirect('/admin/parts');
     }
 
-    $path = APP_ROOT . '/data/tmp/parts_' . $token . '.json';
+    $path = (string) config('storage.tmp', APP_ROOT . '/data/tmp') . '/parts_' . $token . '.json';
     $rows = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
     if (!is_array($rows)) {
         admin_set_notice('取り込むファイルが見つかりませんでした。もう一度お試しください。', 'error');
@@ -393,7 +393,7 @@ function admin_parts_import_cancel(): void
 
     $diff = $_SESSION['admin_part_diff'] ?? null;
     if ($diff && !empty($diff['token'])) {
-        @unlink(APP_ROOT . '/data/tmp/parts_' . $diff['token'] . '.json');
+        @unlink((string) config('storage.tmp', APP_ROOT . '/data/tmp') . '/parts_' . $diff['token'] . '.json');
     }
     unset($_SESSION['admin_part_diff']);
     redirect('/admin/parts');
@@ -477,7 +477,7 @@ function admin_parse_parts_csv(string $path): array
 /** 取り込み前の控え。data/backups に CSV で残す */
 function admin_backup_parts(): string
 {
-    $dir = APP_ROOT . '/data/backups';
+    $dir = (string) config('storage.backups', APP_ROOT . '/data/backups');
     if (!is_dir($dir)) {
         mkdir($dir, 0777, true);
     }

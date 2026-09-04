@@ -4,9 +4,21 @@
  * @var string|null $error @var string $loginId
  */
 ?>
+<?php
+  // デモ用の設置では、打ち間違いを防ぐため最初から入れておく
+  $isDemo   = (bool) config('demo');
+  $demoId   = $isDemo ? 'admin' : '';
+  $demoPass = $isDemo ? 'admin1234' : '';
+?>
 <div class="login-wrap">
   <div class="login-box">
     <h1>管理サイトログイン</h1>
+
+<?php if ($isDemo && !$error): ?>
+    <div class="alert alert--info" style="font-size:13px">
+      デモ用のIDとパスワードを入れてあります。そのまま「ログイン」を押してください。
+    </div>
+<?php endif; ?>
 
 <?php if ($error): ?>
     <div class="alert alert--error" role="alert"><?= h($error) ?></div>
@@ -18,13 +30,14 @@
       <div class="modal__row">
         <label for="login_id">ユーザーID</label>
         <input class="input" type="text" id="login_id" name="login_id"
-               value="<?= h($loginId) ?>" autocomplete="username" spellcheck="false" required>
+               value="<?= h($loginId !== '' ? $loginId : $demoId) ?>" autocomplete="username"
+               inputmode="latin" autocapitalize="off" spellcheck="false" required>
       </div>
 
       <div class="modal__row">
         <label for="password">パスワード</label>
         <input class="input" type="password" id="password" name="password"
-               autocomplete="current-password" required>
+               value="<?= h($demoPass) ?>" autocomplete="current-password" required>
       </div>
 
       <div class="modal__row">

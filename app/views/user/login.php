@@ -22,11 +22,24 @@
 
   <main class="app-main">
 
+<?php
+      // デモ用の設置（Vercel）では、打ち間違いを防ぐため最初から入れておく
+      $isDemo   = (bool) config('demo');
+      $demoId   = $isDemo ? 'ABCDE0001' : '';
+      $demoPass = $isDemo ? 'pass1234' : '';
+?>
     <div class="login-panel">
       <h1 class="login-panel__title">ユーザーログイン</h1>
 
 <?php if ($error): ?>
       <div class="alert alert--error" role="alert"><?= h($error) ?></div>
+<?php endif; ?>
+
+<?php if ($isDemo && !$error): ?>
+      <div class="alert alert--info" style="font-size:13px">
+        デモ用のIDとパスワードを入れてあります。<br>
+        そのまま <strong>「ログイン」</strong> を押してください。
+      </div>
 <?php endif; ?>
 
       <form method="post" action="/login" autocomplete="on" id="js-login">
@@ -35,13 +48,14 @@
         <div class="login-row">
           <label for="login_id">ユーザーID</label>
           <input class="input" type="text" id="login_id" name="login_id"
-                 value="<?= h($loginId) ?>" autocomplete="username"
+                 value="<?= h($loginId !== '' ? $loginId : $demoId) ?>" autocomplete="username"
                  inputmode="latin" autocapitalize="off" spellcheck="false" required>
         </div>
 
         <div class="login-row">
           <label for="password">パスワード</label>
           <input class="input" type="password" id="password" name="password"
+                 value="<?= h($demoPass) ?>"
                  autocomplete="current-password" required>
         </div>
 

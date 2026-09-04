@@ -173,7 +173,12 @@ final class Auth
     private static function evaluateUser(string $loginId, string $password, bool $remember): array
     {
         $account = Database::one('SELECT * FROM accounts WHERE account_id = ?', [$loginId]);
-        $ok      = $account && password_verify($password, $account['password_hash']);
+
+        if ($account) {
+            $account = self::autoUnlock($account);
+        }
+
+        $ok = $account && password_verify($password, $account['password_hash']);
 
         if (!$account) {
             return ['ok' => false, 'error' => 'ユーザーIDまたはパスワードが違います。'];
@@ -233,6 +238,42 @@ final class Auth
         }
 
         return ['ok' => true];
+    }
+
+    /**
+     * ロックを時間で自動解除する。
+     *
+     * 本番（さくら）では auto_unlock_minutes = 0 なので何もしない。
+     * 概要書 1-1「解除は事務局で行う」のとおり、事務局の操作でのみ解ける。
+     *
+     * オンラインのデモだけ 5分で自動解除にしてある。打ち間違いが3回続いたときに
+     * デモそのものが開けなくなってしまうため。
+     */
+    private static function autoUnlock(array $account): array
+    {
+        $minutes = (int) config('auto_unlock_minutes', 0);
+
+        if ($minutes <= 0 || (int) $account['is_locked'] !== 1 || !$account['locked_at']) {
+            return $account;
+        }
+        if (strtotime((string) $account['locked_at']) > time() - $minutes * 60) {
+            return $account;
+        }
+
+        Database::update('accounts', [
+            'is_locked'    => 0,
+            'failed_count' => 0,
+            'locked_at'    => null,
+            'updated_at'   => now(),
+        ], 'id = :id', ['id' => $account['id']]);
+
+        audit('login_auto_unlocked', 'accounts:' . $account['account_id'], "{$minutes}分経過");
+
+        $account['is_locked']    = 0;
+        $account['failed_count'] = 0;
+        $account['locked_at']    = null;
+
+        return $account;
     }
 
     // ---------------- 管理者（事務局） ----------------

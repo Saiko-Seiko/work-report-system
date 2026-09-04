@@ -45,6 +45,11 @@ return [
 
     'debug' => false,
 
+    // デモなので、ログイン画面にIDとパスワードを入れた状態で出す（打ち間違い防止）
+    'demo' => true,
+    // 打ち間違いでロックされてもデモが止まらないよう、5分で自動的に解除する
+    'auto_unlock_minutes' => 5,
+
     'storage' => [
         'signatures' => $runtime . '/signatures',
         'pdf'        => $runtime . '/pdf',

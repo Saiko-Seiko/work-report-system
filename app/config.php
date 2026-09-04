@@ -39,6 +39,11 @@ $config = [
     'company_tel'     => 'TEL 03-0000-0000 / FAX 03-0000-0001',
     'company_branch'  => '大阪営業所 大阪市北区梅田1-1-1　TEL 06-0000-0000',
     'login_max_fail' => 3,           // 3回エラーでロック（解除は事務局）
+
+    // デモ用の表示。true にするとログイン画面にIDとパスワードが最初から入る
+    'demo' => false,
+    // ロックを自動で解除するまでの分数。0 なら自動解除しない（本番は 0＝事務局が解除）
+    'auto_unlock_minutes' => 0,
     'session_name'   => 'wcrsid',
     'debug'          => true,        // 本番では false
     // 書き込み先。書き込めないサーバー（Vercel等）では config.vercel.php が /tmp に差し替える

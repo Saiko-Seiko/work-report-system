@@ -36,6 +36,31 @@ if ($path === '/_check') {
     $live = $tmp . '/wcr/app.sqlite';
     echo "動作中のDB    : " . (is_file($live) ? number_format(filesize($live)) . ' bytes' : '（まだ作られていません）') . "\n";
 
+    // ログインできないときに、原因がロックなのかどうかをここで見分ける
+    if (is_file($live)) {
+        try {
+            require_once APP_ROOT . '/app/lib/helpers.php';
+            require_once APP_ROOT . '/app/lib/Database.php';
+            Database::boot(config());
+
+            echo "\nアカウントの状態\n";
+            foreach (Database::all(
+                'SELECT account_id, is_locked, failed_count, locked_at FROM accounts ORDER BY id'
+            ) as $a) {
+                printf(
+                    "  %-12s ロック:%-4s 失敗:%d回  %s\n",
+                    $a['account_id'],
+                    $a['is_locked'] ? '★あり' : 'なし',
+                    (int) $a['failed_count'],
+                    $a['locked_at'] ? '（' . $a['locked_at'] . ' に）' : ''
+                );
+            }
+            echo "\n  ※ロックは " . (int) config('auto_unlock_minutes') . "分で自動的に解除されます\n";
+        } catch (Throwable $e) {
+            echo "\nアカウントの状態は読めませんでした：" . $e->getMessage() . "\n";
+        }
+    }
+
     exit;
 }
 

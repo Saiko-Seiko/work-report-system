@@ -48,6 +48,18 @@ test.cmd      通し試験をまとめて流す（サーバ起動中に）
 
 デモの進めかたは [docs/demo.md](docs/demo.md)。
 
+### オンラインのデモ（Vercel）
+
+**https://work-report-system-delta.vercel.app** に、上と同じIDで入れます。
+
+Vercel は PHP を標準では動かさないため、有志のランタイム（`vercel-php`）を `vercel.json` で
+指定し、入口を `api/index.php` に置いている。また Vercel は書き込めないサーバーなので、
+`app/config.vercel.php` が DB・サイン画像・控えの置き場所を `/tmp` に差し替え、
+`data/demo.sqlite` を起動のたびにそこへ複製している。
+
+> **入力したデータはしばらくすると消えます。** クライアントに見せるためのデモ専用。
+> 本番はクライアント指定のさくらのレンタルサーバ（[docs/deploy.md](docs/deploy.md)）。
+
 ---
 
 ## ディレクトリ

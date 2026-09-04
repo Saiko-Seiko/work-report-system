@@ -1,0 +1,7 @@
+# さくら（Linux）へそのまま上げるので、リポジトリ側は LF に統一する
+* text=auto eol=lf
+
+# 画像などは触らない
+*.png binary
+*.jpg binary
+*.pdf binary

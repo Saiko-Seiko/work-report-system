@@ -1,0 +1,40 @@
+# さくらのレンタルサーバ（Apache）向け設定
+# このファイルを含む public/ の中身を ~/www に配置する
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 実ファイル・実ディレクトリはそのまま配信
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # それ以外は index.php へ
+  RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# ディレクトリ一覧を出さない
+Options -Indexes
+
+# 文字コード
+AddDefaultCharset UTF-8
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "same-origin"
+</IfModule>
+
+# Service Worker はキャッシュさせない（Phase 4）
+<Files "sw.js">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </IfModule>
+</Files>
+
+# 万一 app/ や data/ を www 配下に置いてしまった場合の保険
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.(sqlite|sql|ini|log)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>

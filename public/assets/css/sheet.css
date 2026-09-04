@@ -1,0 +1,332 @@
+/* ============================================================
+   作業完了報告書 A4用紙（概要書 2-8 のプレビュー画像を再現）
+
+   この1枚を、プレビュー・印刷・本番のPDF（mPDF）が共通で使う。
+   さくらの共用サーバーには変換ソフトを置けないため、
+   「エクセルのテンプレートに流し込む」代わりに、
+   同じ体裁をHTML/CSSで組んでいる。
+
+   単位は mm。A4は 210 x 297mm。
+   ============================================================ */
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+:root {
+  --ink:  #111;
+  --rule: #333;          /* 罫線 */
+  --thin: #777;
+  --sheet-font: 10pt;
+  --sheet-line: 1.55;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #6d7570;
+  color: var(--ink);
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS PMincho", "Noto Serif JP", serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ---------- 用紙 ---------- */
+.sheet {
+  position: relative;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 11mm 12mm 14mm;
+  background: #fff;
+  font-size: var(--sheet-font);
+  line-height: var(--sheet-line);
+}
+
+/* 詰め具合。載る量に応じてサーバー側が付け替える */
+.sheet.d1 { --sheet-font: 10.5pt; --sheet-line: 1.7; }
+.sheet.d2 { --sheet-font: 9.5pt;  --sheet-line: 1.5; }
+.sheet.d3 { --sheet-font: 8.5pt;  --sheet-line: 1.35; }
+
+/* ---------- 見出し ---------- */
+.sheet__kind {
+  font-size: .78em;
+  color: var(--thin);
+  font-family: sans-serif;
+}
+.sheet__title {
+  margin: 1mm 0 0;
+  text-align: center;
+  font-size: 1.85em;
+  font-weight: 700;
+  letter-spacing: .55em;
+  text-indent: .55em;
+}
+.sheet__date {
+  margin-top: 2mm;
+  text-align: right;
+  font-size: .95em;
+}
+
+/* 宛先と自社 */
+.sheet__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6mm;
+  margin-top: 2mm;
+}
+.sheet__to {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-bottom: 1mm;
+  border-bottom: .5mm solid var(--rule);
+  font-size: 1.25em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sheet__to em { font-style: normal; font-size: .78em; margin-left: 3mm; }
+.sheet__from { flex: none; text-align: right; }
+.sheet__from strong {
+  display: block;
+  font-size: 1.3em;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+.sheet__from span {
+  display: block;
+  font-size: .72em;
+  line-height: 1.5;
+  font-family: sans-serif;
+  color: #222;
+}
+
+/* ---------- 共通の表 ---------- */
+.s-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.s-table th,
+.s-table td {
+  border: .3mm solid var(--rule);
+  padding: 1.1mm 2mm;
+  vertical-align: top;
+  word-break: break-word;
+}
+.s-table th {
+  background: #f2f2f2;
+  font-weight: 400;
+  text-align: center;
+  letter-spacing: .35em;
+  text-indent: .35em;
+  white-space: nowrap;
+}
+
+/* 作業日・作業場所・作業者・作業件名 */
+.info-table { margin-top: 4mm; }
+.info-table th { width: 24mm; }
+
+/* ---------- 作業内容 ／ 交換部品 ---------- */
+.body-grid {
+  display: flex;
+  margin-top: -0.3mm;          /* 上の表と罫線を重ねる */
+}
+.body-grid__left  { flex: 1 1 58%; min-width: 0; }
+.body-grid__right { flex: 0 0 42%; margin-left: -0.3mm; }
+
+.block { border: .3mm solid var(--rule); height: 100%; }
+.block__head {
+  padding: 1.1mm 2mm;
+  border-bottom: .3mm solid var(--rule);
+  background: #f2f2f2;
+  text-align: center;
+  letter-spacing: .35em;
+  text-indent: .35em;
+  white-space: nowrap;
+}
+.block__body { padding: 2mm; }
+
+.work-list { margin: 0; padding: 0; list-style: none; }
+.work-list li { padding-left: 3.4mm; text-indent: -3.4mm; }
+.work-list li::before { content: "・"; }
+.work-note { margin: 1.5mm 0 0; white-space: pre-wrap; }
+
+/* 交換部品：名前と数量 */
+.parts-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.parts-table td {
+  border-bottom: .2mm dotted #999;
+  padding: .7mm 1.5mm;
+  vertical-align: top;
+}
+.parts-table .no  { width: 6mm;  color: var(--thin); text-align: right; font-family: sans-serif; font-size: .85em; }
+.parts-table .qty { width: 15mm; text-align: right; white-space: nowrap; }
+.parts-table tr:last-child td { border-bottom: 0; }
+.parts-empty { color: var(--thin); }
+.parts-note { margin: 1.5mm 0 0; white-space: pre-wrap; font-size: .92em; }
+
+/* ---------- 測定値 ---------- */
+/* 概要書 2-8「1件を横一行にしても良い」に沿って、1件1行に並べている */
+.measure-table { margin-top: -0.3mm; }
+.measure-table th { letter-spacing: 0; text-indent: 0; }
+.measure-table col.c-room   { width: 22mm; }
+.measure-table col.c-model  { width: auto;  }
+.measure-table col.c-hours  { width: 24mm; }
+.measure-table col.c-serial { width: 24mm; }
+.measure-table col.c-ym     { width: 26mm; }
+.measure-table td { text-align: center; font-family: sans-serif; font-size: .95em; }
+.measure-table td.left { text-align: left; }
+.measure-table .empty { color: var(--thin); }
+
+/* ---------- 報告事項 ---------- */
+.report-block { margin-top: -0.3mm; }
+.report-list { margin: 0; padding: 0; list-style: none; }
+.report-list li {
+  padding-left: 3.4mm;
+  text-indent: -3.4mm;
+  margin-bottom: .8mm;
+}
+.report-list li::before { content: "・"; }
+.report-empty { color: var(--thin); }
+
+/* ---------- 締め ---------- */
+.sheet__foot { margin-top: 4mm; }
+.sheet__foot-lead { font-size: .95em; }
+
+.sign-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 10mm;
+  margin-top: 2mm;
+}
+.sign-cell {
+  display: flex;
+  align-items: flex-end;
+  gap: 2mm;
+}
+.sign-cell__label { white-space: nowrap; font-size: .95em; }
+.sign-cell__value {
+  position: relative;
+  width: 46mm;
+  height: 12mm;
+  border-bottom: .3mm solid var(--rule);
+  text-align: center;
+}
+.sign-cell__value img {
+  max-width: 100%;
+  max-height: 12mm;
+  vertical-align: bottom;
+  mix-blend-mode: multiply;     /* 白地を残さず紙になじませる */
+}
+.sign-cell__value span {
+  display: block;
+  padding-top: 5mm;
+  font-size: 1.05em;
+}
+
+/* ---------- 画面で見るとき ---------- */
+@media screen {
+  body { padding: 10px 0 26px; }
+  .sheet {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .35);
+  }
+}
+
+/* ---------- 印刷するとき ---------- */
+@media print {
+  html, body { background: #fff; padding: 0; }
+  .sheet {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    box-shadow: none;
+    page-break-after: avoid;
+  }
+  /* 途中で切れると読めなくなる塊は割らない */
+  .block, .measure-table, .report-block, .sheet__foot {
+    page-break-inside: avoid;
+  }
+}
+
+/* ============================================================
+   社内用報告書（4-7）で足りない分
+   ============================================================ */
+
+/* 自由記述の枠は、様式の見た目に合わせて高さを確保する */
+.block--tall { min-height: 42mm; }
+.block__body--flush { padding: 0; }
+
+.free-text { margin: 0; white-space: pre-wrap; }
+
+/* 再手配の必要な部材：様式どおり9行分の枠を引く */
+.parts-table--ruled th {
+  padding: .8mm 1.5mm;
+  background: #f2f2f2;
+  border-bottom: .3mm solid var(--rule);
+  font-weight: 400;
+  text-align: left;
+  letter-spacing: 0;
+  text-indent: 0;
+}
+.parts-table--ruled th.qty, .parts-table--ruled td.qty { text-align: right; }
+.parts-table--ruled td { height: 5.2mm; border-bottom: .2mm solid #bbb; }
+.parts-table--ruled tr:last-child td { border-bottom: 0; }
+
+/* 移動および作業時間 */
+.hours-legend--sheet { margin: 0 0 1.5mm; font-size: .9em; }
+.hours-sheet { width: 100%; border-collapse: collapse; }
+.hours-sheet td {
+  padding: .9mm 1mm;
+  font-family: sans-serif;
+  font-size: .95em;
+  white-space: nowrap;
+}
+.hours-sheet .mark  { width: 5mm; text-align: center; }
+.hours-sheet .label { width: 8mm; text-align: center; }
+.hours-sheet .time  { text-align: center; border-bottom: .2mm solid var(--rule); }
+.hours-sheet .tilde { width: 6mm; text-align: center; }
+.hours-sheet .len   { text-align: right; color: #333; }
+
+.hours-sheet--total { margin-top: 2mm; border-top: .2mm dotted #999; }
+.hours-sheet--total .label { width: auto; text-align: left; color: var(--thin); }
+.hours-sheet--total .len   { width: 24mm; }
+
+/* 完了（請求済）の印 */
+.sheet__stamp {
+  margin-top: 3mm;
+  text-align: right;
+  font-family: sans-serif;
+  font-size: .95em;
+  color: #a3121a;
+  letter-spacing: .05em;
+}
+
+/* ============================================================
+   ?guide=1 を付けたときだけ出る、用紙のふちの目印
+   1枚に収まっているかを画面で確かめるためのもの（印刷には出ない）
+   ============================================================ */
+@media screen {
+  body.guide .sheet { position: relative; }
+  body.guide .sheet::after {
+    content: "A4 1枚の境目（この線より下は2枚目になります）";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 297mm;
+    border-top: 2px dashed #cf2029;
+    color: #cf2029;
+    font-family: sans-serif;
+    font-size: 9pt;
+    padding-top: 2px;
+    pointer-events: none;
+  }
+  body.guide .sheet { min-height: 320mm; }
+}
+@media print {
+  body.guide .sheet::after { display: none; }
+}

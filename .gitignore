@@ -1,0 +1,16 @@
+/data/app.sqlite
+/data/app.sqlite-wal
+/data/app.sqlite-shm
+/data/signatures/*
+/data/pdf/*
+!/data/signatures/.gitkeep
+!/data/pdf/.gitkeep
+/app/config.local.php
+*.log
+Thumbs.db
+.DS_Store
+/data/backups/*
+/data/tmp/*
+!/data/backups/.gitkeep
+!/data/tmp/.gitkeep
+/data/app.sqlite-journal

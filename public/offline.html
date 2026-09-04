@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1b7a46">
+<title>オフライン | 作業完了報告書SYSTEM</title>
+<link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body>
+<div class="viewport">
+  <header class="app-header">
+    <div class="app-header__title">作業完了報告書SYSTEM</div>
+  </header>
+
+  <main class="app-main">
+    <h1 class="page-title">通信が切れています</h1>
+
+    <div class="alert alert--warn">
+      この画面はまだ端末に取り込まれていないため、通信が戻るまで開けません。
+    </div>
+
+    <p style="font-size:15px; line-height:1.9">
+      入力途中の内容は端末に保存されています。消えることはありません。<br>
+      電波の届く場所に移動してから、下のボタンでもう一度お試しください。
+    </p>
+
+    <p style="margin-top:22px">
+      <button class="btn btn--block" type="button" onclick="location.reload()">再読み込み</button>
+    </p>
+    <p style="margin-top:12px">
+      <a class="btn btn--muted btn--block" href="/dashboard">ダッシュボードへ</a>
+    </p>
+  </main>
+</div>
+</body>
+</html>

@@ -512,29 +512,81 @@ html, body {
   color: var(--ink);
 }
 
-/* ---------- 作業者ピッカー（2-1 / 2-5） ---------- */
-.picker__head { display: flex; align-items: center; gap: 8px; }
-.picker__head .input { flex: 1 1 auto; }
-.picker__details { flex: none; }
-.picker__details > summary {
+/* ---------- 作業者の名簿（2-1 / 2-5） ----------
+   「選択」ボタンで開かせず、名前を出しっぱなしにする。
+   現場でのタップを1回減らすため。名前そのものが押せるボタンになっている。 */
+.field-block { margin-bottom: 16px; }
+
+.picker__names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.picker__names > li { flex: 0 0 auto; }
+
+.pick-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-.picker__details > summary::-webkit-details-marker { display: none; }
-.picker__details > summary.is-disabled { background: #c8cfcb; cursor: not-allowed; }
-.picker__body {
-  margin-top: 8px;
-  padding: 10px 12px;
+  min-height: 48px;          /* 手袋のままでも押せる大きさ */
+  min-width: 104px;
+  padding: 0 16px;
+  border: 1px solid #7e8b84;
+  border-radius: 999px;
   background: #fff;
-  border: 1px solid var(--brand-line);
-  border-radius: var(--radius);
+  font-size: 15px;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+  transition: background .12s, border-color .12s;
 }
-.picker__free { display: block; margin-top: 10px; }
-.picker__free > span { display: block; font-size: 12.5px; color: var(--ink-mid); margin-bottom: 3px; }
-.picker.is-locked .picker__head .input { background: #f1f3f2; color: var(--ink-weak); }
+/* チェックボックスそのものは隠し、名前の見た目で選択を表す */
+.pick-chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+.pick-chip span { pointer-events: none; }
 
+.pick-chip:has(input:checked) {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  font-weight: 700;
+}
+.pick-chip:has(input:focus-visible) { outline: 3px solid rgba(27,122,70,.35); }
+.pick-chip:active { background: var(--brand-tint); }
+.pick-chip:has(input:checked):active { background: var(--brand-dark); }
+.pick-chip:has(input:disabled) {
+  background: #f1f3f2;
+  border-color: var(--line);
+  color: #9aa39e;
+  cursor: not-allowed;
+}
+
+/* :has() が使えない古いブラウザ向け。チェック印を出して選択が分かるようにする */
+@supports not (selector(:has(*))) {
+  .pick-chip input { position: static; opacity: 1; width: 20px; height: 20px; margin-right: 8px; }
+}
+
+.picker__free { display: block; }
+.picker__free > span {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-mid);
+  margin-bottom: 4px;
+}
+.picker__free .input { display: block; }
+
+.picker__lock {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  background: #fff6e5;
+  border: 1px solid #e8cf9c;
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--warn);
+}
+.picker.is-locked .picker__free .input { background: #f1f3f2; }
 /* ---------- 署名（2-5 / 2-6） ---------- */
 .sign-block { margin-bottom: 4px; text-align: center; }
 .dow-badge { flex: none; font-size: 13px; color: var(--brand-dark); white-space: nowrap; }

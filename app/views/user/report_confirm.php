@@ -63,17 +63,15 @@ $hasSign    = !empty($report['signature_at']);
     ※上記がすべてチェック済にならないと作業者は登録できません
   </p>
 
-  <div class="form-row" style="margin-top:10px">
-    <label class="form-row__label">作業者<span class="req">*</span></label>
-    <div class="form-row__body">
+  <div class="field-block" style="margin-top:10px">
+    <label class="block-label mb0">作業者<span class="req">*</span></label>
 <?php
-      $selectedIds = $form['submitter_id'] ? [$form['submitter_id']] : [];
-      $freeText    = $form['submitter_free'];
-      $single      = true;
-      $locked      = !$allChecked;
-      require APP_ROOT . '/app/views/partials/worker_picker.php';
+    $selectedIds = $form['submitter_id'] ? [$form['submitter_id']] : [];
+    $freeText    = $form['submitter_free'];
+    $single      = true;
+    $locked      = !$allChecked;
+    require APP_ROOT . '/app/views/partials/worker_picker.php';
 ?>
-    </div>
   </div>
 
 <?php if (!$hasSign): ?>

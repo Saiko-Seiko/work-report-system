@@ -66,22 +66,13 @@
       if (!picker) return;
 
       picker.classList.toggle('is-locked', !all);
-      var head = picker.querySelector('.picker__head input[readonly]');
-      if (head) {
-        head.placeholder = all ? '未選択' : '確認事項にチェックを入れてください';
-      }
-      Array.prototype.forEach.call(
-        picker.querySelectorAll('input:not([readonly]), summary'),
-        function (el) {
-          if (el.tagName === 'SUMMARY') {
-            el.classList.toggle('is-disabled', !all);
-          } else {
-            el.disabled = !all;
-          }
-        }
-      );
-      var details = picker.querySelector('details');
-      if (details && !all) details.open = false;
+
+      Array.prototype.forEach.call(picker.querySelectorAll('input'), function (el) {
+        el.disabled = !all;
+      });
+
+      var lock = picker.querySelector('.picker__lock');
+      if (lock) { lock.hidden = all; }
     }
 
     checklist.addEventListener('change', syncLock);
@@ -115,20 +106,6 @@
     });
   });
 
-  /* ---------- 選択した作業者を上の欄に映す ---------- */
-  Array.prototype.forEach.call(document.querySelectorAll('.picker'), function (picker) {
-    var head = picker.querySelector('.picker__head input[readonly]');
-    if (!head) return;
-
-    picker.addEventListener('change', function () {
-      var names = [];
-      Array.prototype.forEach.call(
-        picker.querySelectorAll('input[type="checkbox"]:checked, input[type="radio"]:checked'),
-        function (b) { if (b.dataset.name) names.push(b.dataset.name); }
-      );
-      var free = picker.querySelector('.picker__free input');
-      if (free && free.value.trim() !== '') names.push(free.value.trim());
-      head.value = names.join('、');
-    });
-  });
+  /* 名簿は出しっぱなしなので、選んだ結果を別の欄に映す必要はない。
+     押した名前がそのまま色で分かるようにしてある（CSS側） */
 }());

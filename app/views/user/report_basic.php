@@ -75,17 +75,15 @@ require APP_ROOT . '/app/views/partials/step_nav.php';
   <p class="field-error"><?= h($errors['work_place']) ?></p>
 <?php endif; ?>
 
-  <div class="form-row">
-    <label class="form-row__label">作業者<span class="req">*</span></label>
-    <div class="form-row__body">
+  <div class="field-block">
+    <label class="block-label mb0">作業者<span class="req">*</span></label>
 <?php
-      $selectedIds = $form['worker_ids'];
-      $freeText    = $form['worker_free'];
-      $single      = false;
-      $locked      = false;
-      require APP_ROOT . '/app/views/partials/worker_picker.php';
+    $selectedIds = $form['worker_ids'];
+    $freeText    = $form['worker_free'];
+    $single      = false;
+    $locked      = false;
+    require APP_ROOT . '/app/views/partials/worker_picker.php';
 ?>
-    </div>
   </div>
 <?php if (isset($errors['workers'])): ?>
   <p class="field-error"><?= h($errors['workers']) ?></p>

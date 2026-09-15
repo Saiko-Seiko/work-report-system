@@ -32,7 +32,7 @@ $time = fn($v) => (string) $v === '' ? '　　:　　' : h((string) $v);
 <head>
 <meta charset="utf-8">
 <title>社内用 作業完了報告書 No.<?= (int) $report['report_no'] ?></title>
-<link rel="stylesheet" href="/assets/css/sheet.css?v=2">
+<link rel="stylesheet" href="<?= h(asset('/assets/css/sheet.css')) ?>">
 </head>
 <body class="<?= query('guide') === '1' ? 'guide' : '' ?>">
 

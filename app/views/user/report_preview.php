@@ -19,7 +19,7 @@ $src     = "/report/{$id}/sheet" . ($isPrint ? '?print=1' : '');
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#1b7a46">
 <title><?= $isPrint ? '印刷' : 'プレビュー' ?> | <?= h(config('app_name')) ?></title>
-<link rel="stylesheet" href="/assets/css/app.css?v=4">
+<link rel="stylesheet" href="<?= h(asset('/assets/css/app.css')) ?>">
 </head>
 <body class="paper-page">
 <div class="viewport viewport--wide">

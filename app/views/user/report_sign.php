@@ -14,9 +14,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#1b7a46">
 <title>サイン入力 | <?= h(config('app_name')) ?></title>
-<link rel="stylesheet" href="/assets/css/app.css?v=3">
+<link rel="stylesheet" href="<?= h(asset('/assets/css/app.css')) ?>">
 </head>
-<body class="sign-page">
+<body class="sign-page" data-sw="/sw.js?v=<?= h(asset_version()) ?>">
 <div class="viewport">
 
   <header class="app-header">
@@ -53,7 +53,7 @@
   </main>
 
 </div>
-<script src="/assets/js/sign.js?v=1"></script>
-<script src="/assets/js/offline.js?v=1"></script>
+<script src="<?= h(asset('/assets/js/sign.js')) ?>"></script>
+<script src="<?= h(asset('/assets/js/offline.js')) ?>"></script>
 </body>
 </html>

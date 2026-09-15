@@ -9,7 +9,12 @@
      - タブレットは会社で共用するので、ログアウト時にキャッシュを全部捨てる
    ============================================================ */
 
-var CACHE = 'wcr-v2';
+/* 登録時の URL（/sw.js?v=…）の版がそのままキャッシュ名になる。
+   部品を直すと版が変わり、古いキャッシュは activate で捨てられる */
+var CACHE = 'wcr-' + (function () {
+  var m = /[?&]v=([0-9a-z]+)/.exec(self.location.search || '');
+  return m ? m[1] : 'v2';
+}());
 
 var SHELL = [
   '/assets/css/app.css',

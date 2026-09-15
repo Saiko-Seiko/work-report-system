@@ -328,8 +328,10 @@
 
   /* ---------------- 起動 ---------------- */
 
+  /* 部品が更新されると URL（?v=）が変わり、Service Worker も入れ替わる */
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
+    var swUrl = document.body.getAttribute('data-sw') || '/sw.js';
+    navigator.serviceWorker.register(swUrl).catch(function () {});
   }
 
   window.addEventListener('online', function () {

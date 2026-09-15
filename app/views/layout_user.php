@@ -19,9 +19,9 @@ $user     = Auth::user();
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#1b7a46">
 <title><?= h($title) ?> | <?= h(config('app_name')) ?></title>
-<link rel="stylesheet" href="/assets/css/app.css?v=1">
+<link rel="stylesheet" href="<?= h(asset('/assets/css/app.css')) ?>">
 </head>
-<body>
+<body data-sw="/sw.js?v=<?= h(asset_version()) ?>">
 <div class="viewport">
 
   <header class="app-header">
@@ -67,8 +67,8 @@ document.getElementById('js-menu')?.addEventListener('click', function () {
   if (d) { d.hidden = !d.hidden; }
 });
 </script>
-<script src="/assets/js/app.js?v=1"></script>
-<script src="/assets/js/offline.js?v=1"></script>
-<script src="/assets/js/mic.js?v=1"></script>
+<script src="<?= h(asset('/assets/js/app.js')) ?>"></script>
+<script src="<?= h(asset('/assets/js/offline.js')) ?>"></script>
+<script src="<?= h(asset('/assets/js/mic.js')) ?>"></script>
 </body>
 </html>

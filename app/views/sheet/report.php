@@ -35,7 +35,7 @@ $signatureUrl = $signatureUrl ?? ('/report/' . (int) $r['id'] . '/signature.png'
 <head>
 <meta charset="utf-8">
 <title>作業完了報告書 No.<?= (int) $r['report_no'] ?></title>
-<link rel="stylesheet" href="/assets/css/sheet.css?v=1">
+<link rel="stylesheet" href="<?= h(asset('/assets/css/sheet.css')) ?>">
 </head>
 <body class="<?= query('guide') === '1' ? 'guide' : '' ?>">
 

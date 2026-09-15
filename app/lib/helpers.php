@@ -29,6 +29,36 @@ function h($value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * CSS/JS の URL に「?v=更新時刻」を付ける。
+ * ファイルを直すたびに URL が変わるので、端末に古いものが残らない
+ * （Service Worker のキャッシュ名にも同じ値を使う）。
+ */
+function asset(string $path): string
+{
+    static $memo = [];
+    if (!isset($memo[$path])) {
+        $file = APP_ROOT . '/public' . $path;
+        $memo[$path] = $path . '?v=' . (is_file($file) ? dechex((int) filemtime($file)) : '1');
+    }
+    return $memo[$path];
+}
+
+/** 部品全体の版。どれか1つでも変わると値が変わる */
+function asset_version(): string
+{
+    static $v = null;
+    if ($v === null) {
+        $latest = 0;
+        foreach (glob(APP_ROOT . '/public/assets/{css,js}/*.{css,js}', GLOB_BRACE) ?: [] as $f) {
+            $latest = max($latest, (int) filemtime($f));
+        }
+        $latest = max($latest, (int) @filemtime(APP_ROOT . '/public/sw.js'), (int) @filemtime(APP_ROOT . '/public/offline.html'));
+        $v = dechex($latest);
+    }
+    return $v;
+}
+
 function now(): string
 {
     return date('Y-m-d H:i:s');

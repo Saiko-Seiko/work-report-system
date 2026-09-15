@@ -25,7 +25,7 @@ $tabs = [
 <meta charset="utf-8">
 <meta name="viewport" content="width=1600">
 <title><?= h($title) ?> | <?= h(config('app_name')) ?> 管理者</title>
-<link rel="stylesheet" href="/assets/css/admin.css?v=1">
+<link rel="stylesheet" href="<?= h(asset('/assets/css/admin.css')) ?>">
 </head>
 <body>
 <div class="admin-shell">

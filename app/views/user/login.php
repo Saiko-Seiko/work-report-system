@@ -11,7 +11,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1b7a46">
 <title>ユーザーログイン | <?= h(config('app_name')) ?></title>
-<link rel="stylesheet" href="/assets/css/app.css?v=2">
+<link rel="stylesheet" href="<?= h(asset('/assets/css/app.css')) ?>">
 </head>
 <body>
 <div class="viewport">

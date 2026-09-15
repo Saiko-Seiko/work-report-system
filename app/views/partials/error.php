@@ -7,7 +7,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($status) ?> | <?= h(config('app_name')) ?></title>
-<link rel="stylesheet" href="/assets/css/app.css?v=1">
+<link rel="stylesheet" href="<?= h(asset('/assets/css/app.css')) ?>">
 </head>
 <body>
 <div class="viewport">

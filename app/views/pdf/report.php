@@ -6,7 +6,7 @@
  * 表（table）と幅の指定だけで組んでいる。
  *
  * @var array  $report @var array $models @var array $parts @var array $measurements
- * @var string $density d1|d2|d3   @var string $signaturePath
+ * @var string $density d1|d2|d3   @var string $signatureData  サイン画像の data: URI（無ければ ''）
  */
 $r  = $report;
 $fs = ['d1' => 10.5, 'd2' => 9.5, 'd3' => 8.5][$density] ?? 10;   // pt
@@ -139,8 +139,8 @@ $t = fn($s) => Pdf::text($s);
     <td width="34%" style="vertical-align:bottom;">上記の内容を報告致します。</td>
     <td width="10%" style="text-align:right; vertical-align:bottom;">サイン</td>
     <td width="24%" style="border-bottom:0.5pt solid #333; text-align:center; vertical-align:bottom;">
-<?php if ($signaturePath !== '' && is_file($signaturePath)): ?>
-      <img src="<?= htmlspecialchars($signaturePath, ENT_QUOTES) ?>" height="38">
+<?php if ($signatureData !== ''): ?>
+      <img src="<?= $signatureData ?>" height="38">
 <?php else: ?>
       &nbsp;
 <?php endif; ?>

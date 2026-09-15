@@ -80,7 +80,7 @@ final class Pdf
         if (!empty($report['signature_file'])) {
             $path = (string) config('storage.signatures') . '/' . (string) $report['signature_file'];
             if (is_file($path)) {
-                $signature = self::flatSignature($path);
+                $signature = self::signatureDataUri($path);
             }
         }
 
@@ -88,13 +88,16 @@ final class Pdf
     }
 
     /**
-     * サイン画像（透明背景）を白地の PNG にして、その置き場所を返す。
+     * サイン画像（透明背景）を白地の PNG にして、data: URI で返す。
+     *
+     * ファイルの場所ではなく中身を渡すのは、TCPDF が「/」で始まる絶対パスに
+     * DOCUMENT_ROOT を勝手に足してしまい（Linux のサーバーで）画像を見失うため。
      *
      * TCPDF は透明付き PNG に GD か Imagick を要求するが、サーバーによっては無い。
      * 先に PHP だけで白地に落とし（Png::flattenToRgb）、できなければ GD、
      * それも無ければ元のファイルをそのまま渡す。結果は data/tmp に控えて使い回す。
      */
-    private static function flatSignature(string $path): string
+    private static function signatureDataUri(string $path): string
     {
         $dir = (string) config('storage.tmp') . '/sig';
         if (!is_dir($dir)) {
@@ -102,7 +105,7 @@ final class Pdf
         }
         $flat = $dir . '/' . md5_file($path) . '.png';
         if (is_file($flat)) {
-            return $flat;
+            return 'data:image/png;base64,' . base64_encode((string) file_get_contents($flat));
         }
 
         $bytes = Png::flattenToRgb((string) file_get_contents($path));
@@ -123,11 +126,13 @@ final class Pdf
             }
         }
 
-        if ($bytes === null || @file_put_contents($flat, $bytes) === false) {
-            return $path;
+        if ($bytes === null) {
+            $bytes = (string) file_get_contents($path);     // 最後の手段：そのまま渡す
+        } else {
+            @file_put_contents($flat, $bytes);
         }
 
-        return $flat;
+        return 'data:image/png;base64,' . base64_encode($bytes);
     }
 
     /** 社内用1件からPDFを作る */
@@ -156,10 +161,10 @@ final class Pdf
      * 客先提出用の報告書（2-8）。
      * @return string PDF のバイト列
      */
-    public static function report(array $data, string $signaturePath = ''): string
+    public static function report(array $data, string $signatureData = ''): string
     {
         $data['density']       = Report::sheetDensity($data);
-        $data['signaturePath'] = $signaturePath;
+        $data['signatureData'] = $signatureData;
 
         return self::render('pdf/report', $data, '作業完了報告書 No.' . (int) $data['report']['report_no']);
     }

@@ -174,6 +174,7 @@ check('画面に表示する指定（inline）', (bool) preg_match('/^content-di
 check('日本語のファイル名が付く', str_contains($r['head'], rawurlencode('作業完了報告書_No' . $row['report_no'] . '.pdf')));
 check('1ページに収まる', substr_count($r['body'], '/Type /Page') - substr_count($r['body'], '/Type /Pages') === 1);
 check('日本語フォントを埋め込んでいる', str_contains($r['body'], 'IPAexGothic') || str_contains($r['body'], 'ipaexg'));
+check('サイン画像がPDFに入っている', !$row['signature_at'] || str_contains($r['body'], '/Subtype /Image'));
 $saved = Database::one('SELECT pdf_at, pdf_file FROM reports WHERE id = ?', [$id]);
 check('data/pdf に保存され、ファイル名が記録される',
     $saved['pdf_file'] === 'report_' . $row['report_no'] . '.pdf' && is_file($pdfDir . '/' . $saved['pdf_file']));

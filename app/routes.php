@@ -111,5 +111,10 @@ $router->get('/admin/texts',         $controller('admin_masters', 'admin_texts')
 $router->post('/admin/texts/save',   $controller('admin_masters', 'admin_texts_save'));
 $router->post('/admin/texts/delete', $controller('admin_masters', 'admin_texts_delete'));
 
+// K-8 確認事項マスタ（2-5 のチェック欄の文言）
+$router->get('/admin/checks',         $controller('admin_checks', 'admin_checks'));
+$router->post('/admin/checks/save',   $controller('admin_checks', 'admin_checks_save'));
+$router->post('/admin/checks/delete', $controller('admin_checks', 'admin_checks_delete'));
+
 // K-7 管理者情報
 $router->any('/admin/profile', $controller('admin_masters', 'admin_profile'));

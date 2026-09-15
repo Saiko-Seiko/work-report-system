@@ -1,6 +1,6 @@
 <?php
 /**
- * Phase 8：管理者サイト K-1〜K-7。
+ * Phase 8：管理者サイト K-1〜K-8。
  * とくに K-4 の CSV 入出力と、部品名を鍵にした差分反映を重点的に見る。
  */
 declare(strict_types=1);
@@ -409,6 +409,63 @@ req('POST', '/admin/texts/delete',
 check('削除は隠すだけ',
     Database::value('SELECT deleted_at FROM report_texts WHERE id = ?', [$text['id']]) !== null);
 
+// ================================================================ K-8
+echo "--- K-8 確認事項マスタ（2-5 のチェック欄） ---\n";
+$r = req('GET', '/admin/checks');
+check('表示される', $r['status'] === 200 && str_contains($r['body'], '確認事項マスタ'));
+check('ナビにタブがある', str_contains($r['body'], 'href="/admin/checks"'));
+$activeBefore = (int) Database::value('SELECT COUNT(*) FROM checklist_items WHERE is_active = 1');
+check('登録済みの確認事項が並ぶ',
+    substr_count($r['body'], 'href="/admin/checks?edit=') === (int) Database::value('SELECT COUNT(*) FROM checklist_items'));
+
+check('文言が空だと弾く', (function () {
+    req('POST', '/admin/checks/save', [
+        '_csrf' => csrf('/admin/checks?new=1'), 'id' => 0, 'label' => '', 'sort_order' => 1, 'is_active' => 1,
+    ]);
+    return str_contains(req('GET', '/admin/checks?new=1')['body'], '文言を入れてください');
+})());
+req('POST', '/admin/checks/save', [
+    '_csrf' => csrf('/admin/checks?new=1'), 'id' => 0,
+    'label' => '試験で足した確認事項', 'sort_order' => 99, 'is_active' => 1,
+]);
+$check = Database::one("SELECT * FROM checklist_items WHERE label = '試験で足した確認事項'");
+check('追加できる', $check !== null && (int) $check['is_active'] === 1 && (int) $check['sort_order'] === 99);
+check('同じ文言は弾く', (function () {
+    req('POST', '/admin/checks/save', [
+        '_csrf' => csrf('/admin/checks?new=1'), 'id' => 0, 'label' => '試験で足した確認事項', 'sort_order' => 1, 'is_active' => 1,
+    ]);
+    return str_contains(req('GET', '/admin/checks?new=1')['body'], 'すでにあります');
+})());
+
+// 現場の 2-5 に出るか（利用者として見る）
+$adminJar = (string) file_get_contents($JAR);
+@unlink($JAR);
+req('POST', '/login', ['_csrf' => csrf('/login'), 'login_id' => 'ABCDE0001', 'password' => 'pass1234']);
+$rep = Database::one('SELECT id FROM reports WHERE account_id = 1 AND deleted_at IS NULL ORDER BY id LIMIT 1');
+check('追加した文言が現場の確認・署名画面に出る',
+    str_contains(req('GET', "/report/{$rep['id']}/confirm")['body'], '試験で足した確認事項'));
+file_put_contents($JAR, $adminJar);
+
+req('POST', '/admin/checks/save', [
+    '_csrf' => csrf('/admin/checks?edit=' . $check['id']), 'id' => $check['id'],
+    'label' => '試験で直した確認事項', 'sort_order' => 98, 'is_active' => 1,
+]);
+check('文言を直せる',
+    Database::value('SELECT label FROM checklist_items WHERE id = ?', [$check['id']]) === '試験で直した確認事項');
+
+req('POST', '/admin/checks/delete', ['_csrf' => csrf('/admin/checks?edit=' . $check['id']), 'id' => $check['id']]);
+check('「使わない」は消さずに is_active を落とすだけ',
+    (int) Database::value('SELECT is_active FROM checklist_items WHERE id = ?', [$check['id']]) === 0
+    && (int) Database::value('SELECT COUNT(*) FROM checklist_items WHERE id = ?', [$check['id']]) === 1);
+check('使う件数が元に戻る',
+    (int) Database::value('SELECT COUNT(*) FROM checklist_items WHERE is_active = 1') === $activeBefore);
+
+@unlink($JAR);
+req('POST', '/login', ['_csrf' => csrf('/login'), 'login_id' => 'ABCDE0001', 'password' => 'pass1234']);
+check('使わない文言は現場の画面から消える',
+    !str_contains(req('GET', "/report/{$rep['id']}/confirm")['body'], '試験で直した確認事項'));
+file_put_contents($JAR, $adminJar);
+
 // ================================================================ K-7
 echo "--- K-7 管理者情報 ---\n";
 $r = req('GET', '/admin/profile');
@@ -438,7 +495,7 @@ check('パスワード空欄なら変えずに保存できる',
 echo "--- 利用者が管理者サイトに入れないか ---\n";
 @unlink($JAR);
 req('POST', '/login', ['_csrf' => csrf('/login'), 'login_id' => 'ABCDE0001', 'password' => 'pass1234']);
-foreach (['/admin/dashboard', '/admin/users', '/admin/parts', '/admin/models',
+foreach (['/admin/dashboard', '/admin/users', '/admin/parts', '/admin/models', '/admin/checks',
           '/admin/texts', '/admin/profile', '/admin/parts/download'] as $p) {
     check("{$p} はログイン画面へ戻される",
         str_contains(req('GET', $p)['location'], '/admin/login'));
@@ -455,7 +512,8 @@ req('POST', '/admin/login',
 $dirty = [];
 foreach (['/admin/dashboard', '/admin/dashboard?q=' . urlencode('病院'), '/admin/users',
           '/admin/users?new=1', '/admin/parts', '/admin/parts?new=1', '/admin/models',
-          '/admin/models?new=1', '/admin/texts', '/admin/texts?new=1', '/admin/profile'] as $p) {
+          '/admin/models?new=1', '/admin/texts', '/admin/texts?new=1', '/admin/checks',
+          '/admin/checks?new=1', '/admin/checks?edit=1', '/admin/profile'] as $p) {
     $x = req('GET', $p);
     if ($x['status'] !== 200 || preg_match('/(Warning|Notice|Deprecated|Fatal error|Undefined)/', $x['body'])) {
         $dirty[] = $p . '(' . $x['status'] . ')';

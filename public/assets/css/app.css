@@ -307,6 +307,8 @@ html, body {
   vertical-align: middle;
 }
 .table tbody tr:nth-child(odd) td { background: var(--row-alt); }
+.table tr.is-muted td { color: var(--ink-mid); }
+.table tr.is-muted td a { color: var(--ink-mid); }
 .table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .table .center { text-align: center; }
 

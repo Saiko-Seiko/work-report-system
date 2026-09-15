@@ -3,7 +3,7 @@
  * 管理者サイト共通レイアウト（PC 1600 x 900）
  * @var string $content
  * @var string|null $title
- * @var string|null $nav    現在のタブ（dashboard|users|parts|models|texts）
+ * @var string|null $nav    現在のタブ（dashboard|users|parts|models|texts|checks）
  * @var bool|null $bare     ログイン画面などナビ無しで出す場合
  */
 $title = $title ?? '管理者';
@@ -16,6 +16,7 @@ $tabs = [
     'parts'     => ['交換部品マスタ', '/admin/parts'],
     'models'    => ['機種名マスタ',   '/admin/models'],
     'texts'     => ['報告事項マスタ', '/admin/texts'],
+    'checks'    => ['確認事項マスタ', '/admin/checks'],
 ];
 ?>
 <!DOCTYPE html>

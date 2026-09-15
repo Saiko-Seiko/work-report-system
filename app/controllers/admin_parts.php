@@ -12,8 +12,8 @@
  *   3. 中身を確認してから実行。実行はトランザクションで、失敗したら丸ごと元に戻す
  *   4. 削除は印を付けて隠すだけ。過去の報告書の記録は残る
  *
- * ファイル形式はエクセルがそのまま開ける CSV（UTF-8 BOM付き）。
- * 共用サーバーに変換ライブラリを置けないため、壊れにくいこちらを選んでいる。
+ * ファイル形式は Excel（.xlsx）が基本。CSV（UTF-8 BOM付き）でも受け取れる。
+ * .xlsx の読み書きは app/lib/Xlsx.php（zip 拡張だけで動く。外部ライブラリ不要）。
  */
 declare(strict_types=1);
 
@@ -202,8 +202,21 @@ function admin_parts_download(): void
           ORDER BY priority DESC, kana, name'
     );
 
-    audit('admin_parts_downloaded', 'parts', count($rows) . '件');
-    admin_send_csv('parts_' . date('Ymd_His') . '.csv', ADMIN_PART_COLUMNS, $rows);
+    $stamp = date('Ymd_His');
+    if (query('format') === 'csv') {
+        audit('admin_parts_downloaded', 'parts', count($rows) . '件 (csv)');
+        admin_send_csv('parts_' . $stamp . '.csv', ADMIN_PART_COLUMNS, $rows);
+    }
+
+    audit('admin_parts_downloaded', 'parts', count($rows) . '件 (xlsx)');
+    $bytes = Xlsx::write(ADMIN_PART_COLUMNS, $rows, '交換部品', [40, 28, 8, 10]);
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Length: ' . strlen($bytes));
+    header('Content-Disposition: attachment; filename="parts_' . $stamp . '.xlsx"');
+    header('Cache-Control: private, no-store');
+    echo $bytes;
+    exit;
 }
 
 /** エクセルでそのまま開けるよう、UTF-8のBOMを付けて送る */
@@ -242,7 +255,7 @@ function admin_parts_import(): void
         redirect('/admin/parts');
     }
 
-    $parsed = admin_parse_parts_csv($file['tmp_name']);
+    $parsed = admin_parse_parts_file($file['tmp_name'], (string) $file['name']);
 
     if ($parsed['errors']) {
         $_SESSION['admin_part_diff'] = [
@@ -400,30 +413,77 @@ function admin_parts_import_cancel(): void
 }
 
 /**
+ * Excel（.xlsx）か CSV かを中身で見分けて読む。拡張子は当てにしない
+ * （エクセルで「CSV」と名前を付けても中身が .xlsx のことがある）。
+ * @return array{rows:array, errors:array}
+ */
+function admin_parse_parts_file(string $path, string $originalName = ''): array
+{
+    if (Xlsx::looksLike($path)) {
+        try {
+            $lines = Xlsx::read($path);
+        } catch (Throwable $e) {
+            return ['rows' => [], 'errors' => ['Excelファイルを読めませんでした：' . $e->getMessage()]];
+        }
+        return admin_check_parts_rows($lines);
+    }
+
+    if (preg_match('/\.xlsx?$/i', $originalName)) {
+        return ['rows' => [], 'errors' => [
+            'Excelのファイルとして読めませんでした。.xlsx 形式（Excel ブック）で保存し直してください。',
+        ]];
+    }
+
+    return admin_parse_parts_csv($path);
+}
+
+/**
  * CSVを読む。1行目は見出しとして飛ばす。
- * 「製品名の重複エラーは実施したい」（概要書 K-4）に対応。
  * @return array{rows:array, errors:array}
  */
 function admin_parse_parts_csv(string $path): array
 {
-    $rows   = [];
-    $errors = [];
-    $seen   = [];
-
     $fh = fopen($path, 'r');
     if (!$fh) {
         return ['rows' => [], 'errors' => ['ファイルを読み込めませんでした。']];
     }
 
-    $lineNo = 0;
+    $lines = [];
     while (($cols = fgetcsv($fh)) !== false) {
+        if ($cols === [null]) {
+            $lines[] = [];
+            continue;
+        }
+        // BOM を落とす。エクセルの保存のしかたによっては BOM が重なることがあるので、まとめて外す
+        if (!$lines) {
+            $cols[0] = preg_replace('/^(?:\xEF\xBB\xBF)+/', '', (string) $cols[0]);
+        }
+        $lines[] = array_map(fn($v) => (string) $v, $cols);
+    }
+    fclose($fh);
+
+    return admin_check_parts_rows($lines);
+}
+
+/**
+ * 行の中身を確かめて、取り込める形にそろえる（Excel・CSV 共通）。
+ * 「製品名の重複エラーは実施したい」（概要書 K-4）に対応。
+ *
+ * @param string[][] $lines 1行目は見出し
+ * @return array{rows:array, errors:array}
+ */
+function admin_check_parts_rows(array $lines): array
+{
+    $rows   = [];
+    $errors = [];
+    $seen   = [];
+
+    $lineNo = 0;
+    foreach ($lines as $cols) {
         $lineNo++;
 
         if ($lineNo === 1) {
-            // BOM を落として見出しかどうかを見る。
-            // エクセルの保存のしかたによっては BOM が重なることがあるので、まとめて外す
-            $cols[0] = preg_replace('/^(?:\xEF\xBB\xBF)+/', '', (string) $cols[0]);
-            if (trim((string) $cols[0]) === ADMIN_PART_COLUMNS[0]) {
+            if (trim((string) ($cols[0] ?? '')) === ADMIN_PART_COLUMNS[0]) {
                 continue;
             }
             // 見出しが違うと、以降の列の対応がずれて事故になるのでここで止める
@@ -431,7 +491,7 @@ function admin_parse_parts_csv(string $path): array
                 . '）にしてください。ダウンロードしたファイルをそのまま直すのが確実です。';
             continue;
         }
-        if ($cols === [null] || (count($cols) === 1 && trim((string) $cols[0]) === '')) {
+        if (!$cols || (count($cols) === 1 && trim((string) $cols[0]) === '')) {
             continue;
         }
 
@@ -465,7 +525,6 @@ function admin_parse_parts_csv(string $path): array
             'priority' => max(0, min(999999, (int) $prio)),
         ];
     }
-    fclose($fh);
 
     if (!$rows && !$errors) {
         $errors[] = '取り込める行がありませんでした。1行目に見出し、2行目から中身を入れてください。';
@@ -474,7 +533,7 @@ function admin_parse_parts_csv(string $path): array
     return ['rows' => $rows, 'errors' => $errors];
 }
 
-/** 取り込み前の控え。data/backups に CSV で残す */
+/** 取り込み前の控え。data/backups に Excel（そのまま再インポートできる形）で残す */
 function admin_backup_parts(): string
 {
     $dir = (string) config('storage.backups', APP_ROOT . '/data/backups');
@@ -482,16 +541,13 @@ function admin_backup_parts(): string
         mkdir($dir, 0777, true);
     }
 
-    $name = 'parts_backup_' . date('Ymd_His') . '.csv';
-    $fh   = fopen($dir . '/' . $name, 'w');
-    fwrite($fh, "\xEF\xBB\xBF");
-    fputcsv($fh, ADMIN_PART_COLUMNS);
-    foreach (Database::all(
-        'SELECT name, kana, unit, priority FROM parts WHERE deleted_at IS NULL ORDER BY id'
-    ) as $row) {
-        fputcsv($fh, array_values($row));
-    }
-    fclose($fh);
+    $name = 'parts_backup_' . date('Ymd_His') . '.xlsx';
+    file_put_contents($dir . '/' . $name, Xlsx::write(
+        ADMIN_PART_COLUMNS,
+        Database::all('SELECT name, kana, unit, priority FROM parts WHERE deleted_at IS NULL ORDER BY id'),
+        '交換部品',
+        [40, 28, 8, 10]
+    ));
 
     return $name;
 }

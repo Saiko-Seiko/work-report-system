@@ -13,11 +13,13 @@ $link = fn(string $key, string $label) =>
 <?php endif; ?>
 
 <div class="toolbar">
-  <a class="btn" href="/admin/parts/download">ダウンロード</a>
+  <a class="btn" href="/admin/parts/download">Excelでダウンロード</a>
+  <a class="btn btn--ghost" href="/admin/parts/download?format=csv" title="CSV（UTF-8）で受け取る">CSV</a>
 
   <form method="post" action="/admin/parts/import" enctype="multipart/form-data" class="import-form">
     <?= csrf_field() ?>
-    <input class="input" type="file" name="file" accept=".csv,text/csv" required>
+    <input class="input" type="file" name="file"
+           accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required>
     <button class="btn" type="submit">インポート</button>
   </form>
 
@@ -131,8 +133,8 @@ $link = fn(string $key, string $label) =>
 <div class="help-box">
   <h3>入れ替えのしかた</h3>
   <ol>
-    <li>「ダウンロード」で現在の登録内容をCSVで受け取る（エクセルでそのまま開けます）</li>
-    <li>エクセルで直して、CSV（UTF-8）のまま保存する</li>
+    <li>「Excelでダウンロード」で現在の登録内容を .xlsx で受け取る</li>
+    <li>エクセルで直して、そのまま .xlsx で保存する（CSV（UTF-8）でも可）</li>
     <li>「インポート」でファイルを選ぶと、<strong>追加・変更・削除の件数</strong>が出ます</li>
     <li>中身を確かめて「この内容で取り込む」を押す</li>
   </ol>

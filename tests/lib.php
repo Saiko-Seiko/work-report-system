@@ -23,6 +23,7 @@ require TEST_ROOT . '/app/lib/helpers.php';
 require TEST_ROOT . '/app/lib/Database.php';
 require TEST_ROOT . '/app/lib/Report.php';
 require TEST_ROOT . '/app/lib/InternalReport.php';
+require TEST_ROOT . '/app/lib/Xlsx.php';
 
 Database::boot(config());
 
@@ -57,7 +58,9 @@ function req(string $method, string $path, array $fields = [], ?string $file = n
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
         if ($file !== null) {
-            $fields['file'] = new CURLFile($file, 'text/csv', basename($file));
+            $mime = str_ends_with($file, '.xlsx')
+                ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv';
+            $fields['file'] = new CURLFile($file, $mime, basename($file));
             curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
         } else {
             curl_setopt($ch, CURLOPT_POSTFIELDS, test_body($fields));

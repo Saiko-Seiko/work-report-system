@@ -186,13 +186,28 @@ check('ダウンロードとインポートのボタンがある',
     str_contains($r['body'], 'ダウンロード') && str_contains($r['body'], 'インポート'));
 check('ヨミガナ列がある', str_contains($r['body'], 'ヨミガナ'));
 
-echo "--- K-4 ダウンロード ---\n";
-$dl = req('GET', '/admin/parts/download');
+echo "--- K-4 ダウンロード（Excel） ---\n";
+$xl = req('GET', '/admin/parts/download');
+check('Excel（.xlsx）として返る',
+    str_contains($xl['head'], 'spreadsheetml.sheet') && str_contains($xl['head'], '.xlsx"')
+    && str_starts_with($xl['body'], 'PK'));
+$xlPath = $TMP . '/parts_dl.xlsx';
+file_put_contents($xlPath, $xl['body']);
+$xlRows = Xlsx::read($xlPath);
+$dbCount = (int) Database::value('SELECT COUNT(*) FROM parts WHERE deleted_at IS NULL');
+check('Excel に見出し＋全件が入る', count($xlRows) === $dbCount + 1, (count($xlRows) - 1) . '/' . $dbCount . '件');
+check('Excel の見出しが4列', ($xlRows[0] ?? []) === ['部品名', 'ヨミガナ', '単位', '優先順位']);
+check('Excel の中身がDBと一致する', (function () use ($xlRows) {
+    $first = Database::one('SELECT name, kana, unit, priority FROM parts WHERE deleted_at IS NULL ORDER BY priority DESC, kana, name LIMIT 1');
+    return ($xlRows[1] ?? []) === [$first['name'], $first['kana'], $first['unit'], (string) $first['priority']];
+})());
+
+echo "--- K-4 ダウンロード（CSV） ---\n";
+$dl = req('GET', '/admin/parts/download?format=csv');
 check('CSVとして返る', str_contains($dl['head'], 'text/csv')
     && str_contains($dl['head'], 'attachment'));
 check('エクセルで開けるようBOMが付く', str_starts_with($dl['body'], "\xEF\xBB\xBF"));
 $lines = preg_split('/\r\n|\n/', trim($dl['body']));
-$dbCount = (int) Database::value('SELECT COUNT(*) FROM parts WHERE deleted_at IS NULL');
 check('見出し＋全件が入る', count($lines) === $dbCount + 1,
     (count($lines) - 1) . '/' . $dbCount . '件');
 check('見出しが4列', str_contains($lines[0], '部品名') && str_contains($lines[0], 'ヨミガナ')
@@ -215,6 +230,12 @@ check('優先順位が数字でない行を知らせる', str_contains($body, '�
 check('エラーがあれば取り込まない',
     (int) Database::value('SELECT COUNT(*) FROM parts WHERE deleted_at IS NULL') === $dbCount);
 
+$fakeXl = $TMP . '/parts_fake.xlsx';
+file_put_contents($fakeXl, "これはExcelではない\n");
+req('POST', '/admin/parts/import', ['_csrf' => csrf('/admin/parts')], $fakeXl);
+check('拡張子だけ .xlsx の壊れたファイルを弾く',
+    str_contains(req('GET', '/admin/parts')['body'], 'Excelのファイルとして読めませんでした'));
+
 echo "--- K-4 インポート：差分の確認 ---\n";
 // ダウンロードしたCSVを少しだけ直す（1件変更・1件追加・1件削除）
 $rows = array_slice($lines, 1);
@@ -228,7 +249,23 @@ file_put_contents($good, "\xEF\xBB\xBF" . $lines[0] . "\n" . implode("\n", $rows
 
 req('POST', '/admin/parts/import', ['_csrf' => csrf('/admin/parts')], $good);
 $body = req('GET', '/admin/parts')['body'];
-check('取り込む前に確認が出る', str_contains($body, '取り込む内容の確認'));
+check('CSVでも取り込む前に確認が出る', str_contains($body, '取り込む内容の確認'));
+check('CSVでも追加1件と出る', (bool) preg_match('/diff-box--add">\s*<b>1<\/b>/', $body));
+req('POST', '/admin/parts/import/cancel', ['_csrf' => csrf('/admin/parts')]);
+check('キャンセルで確認が消える', !str_contains(req('GET', '/admin/parts')['body'], '取り込む内容の確認'));
+
+// 同じ直しを Excel（.xlsx）で。ダウンロードした .xlsx を読み、直して書き戻す
+$xlEdit = array_slice($xlRows, 1);
+$xlEdit[0] = [$firstName, 'ヘンコウズミ', '枚', 999999];
+array_pop($xlEdit);
+$xlEdit[] = ['新規テスト部材', 'シンキテストブザイ', '本', 50];
+$goodXl = $TMP . '/parts_good.xlsx';
+file_put_contents($goodXl, Xlsx::write($xlRows[0], $xlEdit));
+
+req('POST', '/admin/parts/import', ['_csrf' => csrf('/admin/parts')], $goodXl);
+$body = req('GET', '/admin/parts')['body'];
+check('Excel で取り込む前に確認が出る', str_contains($body, '取り込む内容の確認'));
+check('ファイル名が Excel のもの', str_contains($body, 'parts_good.xlsx'));
 check('追加1件と出る', (bool) preg_match('/diff-box--add">\s*<b>1<\/b>/', $body));
 check('変更1件と出る', (bool) preg_match('/diff-box--update">\s*<b>1<\/b>/', $body));
 check('削除1件と出る', (bool) preg_match('/diff-box--remove">\s*<b>1<\/b>/', $body));
@@ -265,12 +302,13 @@ check('過去の報告書からの紐付けが外れない（採番が変わら�
         [$linked['part_id'], $linked['name']]) === 1,
     $linked['name']);
 
-$backups = glob($ROOT . '/data/backups/parts_backup_*.csv');
-check('取り込み前の控えが残る', count($backups) >= 1,
+$backups = glob($ROOT . '/data/backups/parts_backup_*.xlsx');
+usort($backups, fn($a, $b) => filemtime($a) <=> filemtime($b));
+check('取り込み前の控えが Excel で残る', count($backups) >= 1,
     $backups ? basename(end($backups)) : 'なし');
-check('控えの中身が取り込み前の件数と合う', (function () use ($backups, $dbCount) {
-    $n = count(preg_split('/\r\n|\n/', trim((string) file_get_contents(end($backups))))) - 1;
-    return $n === $dbCount;
+check('控えの中身が取り込み前の件数と合う（そのまま再インポートできる形）', (function () use ($backups, $dbCount) {
+    $rows = Xlsx::read(end($backups));
+    return count($rows) - 1 === $dbCount && $rows[0] === ['部品名', 'ヨミガナ', '単位', '優先順位'];
 })());
 
 echo "--- K-4 1件ずつの登録 ---\n";

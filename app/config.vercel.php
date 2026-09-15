@@ -21,7 +21,7 @@ foreach (['', '/signatures', '/pdf', '/backups', '/tmp'] as $sub) {
 }
 
 // セッションの置き場所も /tmp にする（session_start より前に決める必要がある）
-if (is_writable(sys_get_temp_dir())) {
+if (is_writable(sys_get_temp_dir()) && !headers_sent()) {
     ini_set('session.save_path', sys_get_temp_dir());
 }
 

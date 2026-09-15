@@ -424,6 +424,8 @@ function seed_reports(array $accounts): void
             'parts_note'     => null,
             'report_body'    => $isDraft ? null : implode("\n", array_slice($texts, 0, 3)),
             'checked_ids'    => $isDraft ? null : $allChecks,
+            // 2-5 の下段「作業者」＝報告書の「担当」。提出済みなら必ず入っている
+            'submitter_name' => $isDraft ? null : $workers[0],
             // 一覧の「署名 有」と紙のサイン欄を食い違わせないよう、画像も作る
             'signature_file' => $isDraft ? null : seed_signature_image($no, $workers[0]),
             'signature_at'   => $isDraft ? null : $workDate . ' 16:40:00',

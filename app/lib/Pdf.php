@@ -80,11 +80,54 @@ final class Pdf
         if (!empty($report['signature_file'])) {
             $path = (string) config('storage.signatures') . '/' . (string) $report['signature_file'];
             if (is_file($path)) {
-                $signature = $path;
+                $signature = self::flatSignature($path);
             }
         }
 
         return self::report(Report::sheetData($report), $signature);
+    }
+
+    /**
+     * サイン画像（透明背景）を白地の PNG にして、その置き場所を返す。
+     *
+     * TCPDF は透明付き PNG に GD か Imagick を要求するが、サーバーによっては無い。
+     * 先に PHP だけで白地に落とし（Png::flattenToRgb）、できなければ GD、
+     * それも無ければ元のファイルをそのまま渡す。結果は data/tmp に控えて使い回す。
+     */
+    private static function flatSignature(string $path): string
+    {
+        $dir = (string) config('storage.tmp') . '/sig';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+        $flat = $dir . '/' . md5_file($path) . '.png';
+        if (is_file($flat)) {
+            return $flat;
+        }
+
+        $bytes = Png::flattenToRgb((string) file_get_contents($path));
+
+        if ($bytes === null && function_exists('imagecreatefrompng')) {
+            $src = @imagecreatefrompng($path);
+            if ($src) {
+                $w   = imagesx($src);
+                $h   = imagesy($src);
+                $dst = imagecreatetruecolor($w, $h);
+                imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+                imagecopy($dst, $src, 0, 0, 0, 0, $w, $h);
+                ob_start();
+                imagepng($dst);
+                $bytes = (string) ob_get_clean();
+                imagedestroy($src);
+                imagedestroy($dst);
+            }
+        }
+
+        if ($bytes === null || @file_put_contents($flat, $bytes) === false) {
+            return $path;
+        }
+
+        return $flat;
     }
 
     /** 社内用1件からPDFを作る */

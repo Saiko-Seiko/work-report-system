@@ -16,7 +16,8 @@ final class Database
 
         if (self::$driver === 'mysql') {
             $c   = $config['mysql'];
-            $dsn = sprintf('mysql:host=%s;dbname=%s;charset=%s', $c['host'], $c['database'], $c['charset']);
+            $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s',
+                $c['host'], (int) ($c['port'] ?? 3306), $c['database'], $c['charset']);
             self::$pdo = new PDO($dsn, $c['user'], $c['password'], [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

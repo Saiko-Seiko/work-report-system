@@ -39,7 +39,7 @@ if ($only !== null) {
  * このプロセス自身が -d で受け取っていても子には引き継がれないので、
  * 子と同じ条件（素の php）で何が入っているかを一度だけ調べる。
  */
-$need  = ['pdo_sqlite', 'sqlite3', 'gd', 'curl'];
+$need  = ['pdo_sqlite', 'sqlite3', 'pdo_mysql', 'gd', 'curl'];
 $probe = [];
 exec(
     escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg('echo implode(",", get_loaded_extensions());'),

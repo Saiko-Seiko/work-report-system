@@ -38,6 +38,10 @@ function seed_truncate(): void
         'audit_logs', 'login_attempts', 'remember_tokens', 'sync_ops', 'accounts', 'admins',
     ] as $t) {
         Database::pdo()->exec("DELETE FROM {$t}");
+        // 採番も 1 から。SQLite と MySQL で戻し方が違う
+        if (Database::driver() === 'mysql') {
+            Database::pdo()->exec("ALTER TABLE {$t} AUTO_INCREMENT = 1");
+        }
     }
     if (Database::driver() === 'sqlite') {
         Database::pdo()->exec("DELETE FROM sqlite_sequence");

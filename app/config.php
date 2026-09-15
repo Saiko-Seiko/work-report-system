@@ -19,6 +19,7 @@ $config = [
     // さくら側の値に差し替える
     'mysql' => [
         'host'     => 'mysqlXXX.db.sakura.ne.jp',
+        'port'     => 3306,
         'database' => 'xxxxxx_report',
         'user'     => 'xxxxxx',
         'password' => '',

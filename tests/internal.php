@@ -241,13 +241,30 @@ $r = req('GET', "/report/{$id}/internal/print");
 check('印刷は print=1 付きで読む', str_contains($r['body'], "internal/sheet?print=1"));
 check('print=1 で印刷ダイアログを呼ぶ',
     str_contains(req('GET', "/report/{$id}/internal/sheet?print=1")['body'], 'window.print()'));
+check('「PDFで開く」「PDFを保存」がある',
+    str_contains($r['body'], "href=\"/report/{$id}/internal/pdf\"")
+    && str_contains($r['body'], "href=\"/report/{$id}/internal/pdf?dl=1\""));
+
+echo "--- 社内用の本物のPDF ---\n";
+$r = req('GET', "/report/{$id}/internal/pdf");
+check('PDFが返る', $r['status'] === 200 && str_starts_with($r['body'], '%PDF-'), strlen($r['body']) . 'B');
+check('1ページに収まる', substr_count($r['body'], '/Type /Page') - substr_count($r['body'], '/Type /Pages') === 1);
+check('日本語のファイル名が付く', str_contains($r['head'], rawurlencode('社内用_作業完了報告書_No' . $row['report_no'] . '.pdf')));
+$savedInternal = Database::one('SELECT pdf_at, pdf_file FROM internal_reports WHERE report_id = ?', [$id]);
+check('data/pdf に保存され、ファイル名が記録される',
+    $savedInternal['pdf_file'] === 'internal_' . $row['report_no'] . '.pdf'
+    && is_file((string) config('storage.pdf') . '/' . $savedInternal['pdf_file'])
+    && $savedInternal['pdf_at'] !== null);
+check('?dl=1 なら保存の指定（attachment）',
+    (bool) preg_match('/^content-disposition:\s*attachment/mi', req('GET', "/report/{$id}/internal/pdf?dl=1")['head']));
 
 // ---------------------------------------------------------------- 4-6 完了
 echo "--- 4-6 完了（請求済）＝ 概要書5の ⑥ ---\n";
 $r = req('GET', "/report/{$id}/internal/confirm");
 check('PDF確認画面が出る', $r['status'] === 200 && str_contains($r['body'], 'PDF確認画面'));
-check('プレビューと印刷の導線がある',
-    str_contains($r['body'], 'internal/preview') && str_contains($r['body'], 'internal/print'));
+check('プレビューと印刷とPDF保存の導線がある',
+    str_contains($r['body'], 'internal/preview') && str_contains($r['body'], 'internal/print')
+    && str_contains($r['body'], 'internal/pdf?dl=1'));
 check('完了ボタンがある', str_contains($r['body'], 'internal/confirm?complete=1'));
 
 $r = req('GET', "/report/{$id}/internal/confirm?complete=1");

@@ -33,9 +33,9 @@ $target = Database::one(
     "SELECT r.*, a.company_name FROM reports r JOIN accounts a ON a.id = r.account_id
       WHERE r.pdf_at IS NOT NULL ORDER BY r.report_no DESC LIMIT 1");
 check('報告書PDFへのリンクが出る',
-    str_contains($r['body'], '/admin/report/' . $target['id'] . '/sheet'));
+    str_contains($r['body'], '/admin/report/' . $target['id'] . '/pdf"'));
 check('社内用PDFへのリンクが出る',
-    str_contains($r['body'], '/admin/report/'));
+    str_contains($r['body'], '/internal-pdf"'));
 
 echo "--- K-2 検索 ---\n";
 $hospital = (string) $target['hospital_name'];
@@ -77,12 +77,22 @@ if ($withInternal) {
     $r = req('GET', '/admin/report/' . $withInternal['report_id'] . '/internal-sheet');
     check('社内用のA4も出せる',
         $r['status'] === 200 && str_contains($r['body'], '今回作業時の残作業'));
+    $r = req('GET', '/admin/report/' . $withInternal['report_id'] . '/internal-pdf');
+    check('社内用の本物のPDFも出せる', $r['status'] === 200 && str_starts_with($r['body'], '%PDF-'));
 }
+$r = req('GET', '/admin/report/' . $target['id'] . '/pdf');
+check('客先提出用の本物のPDFを出せる（●の飛び先）',
+    $r['status'] === 200 && str_starts_with($r['body'], '%PDF-')
+    && (bool) preg_match('#^content-type:\s*application/pdf#mi', $r['head']));
+check('管理者が見ても pdf_file は書き換えない（利用者の記録を汚さない）',
+    Database::value('SELECT pdf_file FROM reports WHERE id = ?', [$target['id']]) === $target['pdf_file']);
+
 $noInternal = Database::one(
     'SELECT id FROM reports WHERE id NOT IN (SELECT report_id FROM internal_reports) LIMIT 1');
 if ($noInternal) {
     check('社内用が無ければその旨を返す',
-        req('GET', '/admin/report/' . $noInternal['id'] . '/internal-sheet')['status'] === 404);
+        req('GET', '/admin/report/' . $noInternal['id'] . '/internal-sheet')['status'] === 404
+        && req('GET', '/admin/report/' . $noInternal['id'] . '/internal-pdf')['status'] === 404);
 }
 
 // ================================================================ K-3
@@ -396,7 +406,8 @@ foreach (['/admin/dashboard', '/admin/users', '/admin/parts', '/admin/models',
         str_contains(req('GET', $p)['location'], '/admin/login'));
 }
 check('管理者用のPDF経路も入れない',
-    str_contains(req('GET', '/admin/report/' . $target['id'] . '/sheet')['location'], '/admin/login'));
+    str_contains(req('GET', '/admin/report/' . $target['id'] . '/sheet')['location'], '/admin/login')
+    && str_contains(req('GET', '/admin/report/' . $target['id'] . '/pdf')['location'], '/admin/login'));
 
 // ================================================================ 警告
 echo "--- 警告の有無 ---\n";

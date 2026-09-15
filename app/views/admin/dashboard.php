@@ -77,7 +77,7 @@ $link = fn(string $key, string $label) =>
       <td class="c-mark center"><?= $r['signature_at'] ? '有' : '－' ?></td>
       <td class="c-mark center">
 <?php if ($r['pdf_at']): ?>
-        <a class="mark-link" href="/admin/report/<?= $id ?>/sheet" target="_blank"
+        <a class="mark-link" href="/admin/report/<?= $id ?>/pdf" target="_blank"
            rel="noopener" title="報告書PDFを表示">●</a>
 <?php else: ?>
         －
@@ -86,7 +86,7 @@ $link = fn(string $key, string $label) =>
       <td class="c-mark center"><?= (int) $r['mail_count'] ?></td>
       <td class="c-mark center">
 <?php if ($r['internal_pdf_at']): ?>
-        <a class="mark-link" href="/admin/report/<?= $id ?>/internal-sheet" target="_blank"
+        <a class="mark-link" href="/admin/report/<?= $id ?>/internal-pdf" target="_blank"
            rel="noopener" title="社内用報告書PDFを表示">●</a>
 <?php else: ?>
         －
@@ -99,6 +99,6 @@ $link = fn(string $key, string $label) =>
 </table>
 
 <p class="muted" style="font-size:13px; margin-top:12px">
-  「PDF」「社内用」の●を押すと、その報告書をA4の様式で別のタブに表示します（そのまま印刷できます）。
+  「PDF」「社内用」の●を押すと、その報告書のPDF（A4）を別のタブに表示します（そのまま印刷・保存できます）。
   「状態」の見出しを押すと完了したものを先頭にまとめられます。
 </p>

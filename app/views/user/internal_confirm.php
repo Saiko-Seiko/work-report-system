@@ -60,6 +60,11 @@ $done = !empty($internal['completed_at']);
       <span>印刷<small>ブラウザの印刷画面を開きます</small></span>
     </a>
   </li>
+  <li>
+    <a href="/report/<?= $id ?>/internal/pdf?dl=1">
+      <span>PDFを保存<small>社内用報告書のPDFファイルをこの端末に保存します</small></span>
+    </a>
+  </li>
 </ul>
 
 <div class="nav-buttons">

@@ -14,6 +14,8 @@ require APP_ROOT . '/app/lib/Auth.php';
 require APP_ROOT . '/app/lib/Report.php';
 require APP_ROOT . '/app/lib/InternalReport.php';
 require APP_ROOT . '/app/lib/Sync.php';
+require APP_ROOT . '/app/lib/Pdf.php';
+require APP_ROOT . '/app/lib/Mailer.php';
 
 if (config('debug')) {
     ini_set('display_errors', '1');

@@ -187,6 +187,7 @@ CREATE TABLE reports (
   signature_at   DATETIME     NULL,
 
   pdf_at         DATETIME     NULL,               -- 提出用PDFを作った日時（一覧のPDF●）
+  pdf_file       VARCHAR(255) NULL,               -- data/pdf に保存した最新のPDFファイル名
   mail_count     INT          NOT NULL DEFAULT 0, -- 一覧のMail列
   submitted_at   DATETIME     NULL,
   completed_at   DATETIME     NULL,               -- 一覧の状態「完」
@@ -273,6 +274,7 @@ CREATE TABLE internal_reports (
   remarks        TEXT         NULL,              -- 4-5 備考（社内への報告事項）
 
   pdf_at         DATETIME     NULL,              -- 一覧の「社内用」●
+  pdf_file       VARCHAR(255) NULL,              -- data/pdf に保存した最新のPDFファイル名
   completed_at   DATETIME     NULL,              -- 「完了」ボタン（請求済）
   created_at     DATETIME     NOT NULL,
   updated_at     DATETIME     NOT NULL
@@ -303,6 +305,7 @@ CREATE TABLE mail_logs (
   cc_addr    VARCHAR(512) NULL,
   subject    VARCHAR(255) NULL,
   body       TEXT         NULL,
+  attachment VARCHAR(255) NULL,                     -- 添付したPDF（data/pdf 内のファイル名）
   is_dry_run TINYINT      NOT NULL DEFAULT 0,
   sent_at    DATETIME     NOT NULL
 ){{TAIL}};

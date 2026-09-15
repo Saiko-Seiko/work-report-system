@@ -388,6 +388,26 @@ function internal_sheet(array $p): void
     ]);
 }
 
+/**
+ * 社内用の本物のPDF。/report/{id}/internal/pdf（?dl=1 で保存）
+ * 作るたびに data/pdf/internal_{No}.pdf を最新の内容で書き換える。
+ */
+function internal_pdf(array $p): void
+{
+    [, $report, $internal] = internal_load($p);
+
+    $bytes = Pdf::forInternal($report, $internal);
+    $file  = Pdf::store($bytes, 'internal', (int) $report['report_no']);
+
+    InternalReport::touch((int) $internal['id'], [
+        'pdf_at'   => $internal['pdf_at'] ?: now(),
+        'pdf_file' => $file,
+    ]);
+    audit('internal_pdf', 'internal_reports:' . (int) $internal['id'], $file);
+
+    Pdf::send($bytes, Pdf::fileName('internal', $report), query('dl') === '1', Pdf::fileName('internal', $report, true));
+}
+
 function internal_preview(array $p): void
 {
     [, $report] = internal_load($p);

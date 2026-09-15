@@ -24,7 +24,7 @@ echo "対象 No.{$row['report_no']} / {$row['hospital_name']}（id={$id}）\n";
 echo "--- 2-7 完了画面 ---\n";
 $r = req('GET', "/report/{$id}/done");
 check('表示される', $r['status'] === 200);
-foreach (['報告書のプレビュー', '印刷', 'メール送信'] as $label) {
+foreach (['報告書のプレビュー', '印刷', 'PDFを保存', 'メール送信'] as $label) {
     check("メニューに「{$label}」がある", str_contains($r['body'], $label));
 }
 check('押せないボタンは無くなった', substr_count($r['body'], 'is-pending') === 0);
@@ -141,6 +141,8 @@ $r = req('GET', "/report/{$id}/preview");
 check('プレビューが用紙をiframeで読む',
     $r['status'] === 200 && str_contains($r['body'], "src=\"/report/{$id}/sheet\""));
 check('［×閉じる］がある', str_contains($r['body'], '×閉じる'));
+check('「PDFで開く」「PDFを保存」がある',
+    str_contains($r['body'], "href=\"/report/{$id}/pdf\"") && str_contains($r['body'], "href=\"/report/{$id}/pdf?dl=1\""));
 
 $r = req('GET', "/report/{$id}/print");
 check('印刷は print=1 付きで読む',
@@ -162,12 +164,40 @@ if ($fresh) {
         Database::value('SELECT pdf_at FROM reports WHERE id = ?', [$id]) !== null);
 }
 
+// ---------------------------------------------------------------- PDF
+echo "--- 本物のPDF（保存・添付に使うもの） ---\n";
+$pdfDir = (string) config('storage.pdf');
+$r = req('GET', "/report/{$id}/pdf");
+check('PDFが返る', $r['status'] === 200 && str_starts_with($r['body'], '%PDF-'), strlen($r['body']) . 'B');
+check('Content-Type が application/pdf', (bool) preg_match('#^content-type:\s*application/pdf#mi', $r['head']));
+check('画面に表示する指定（inline）', (bool) preg_match('/^content-disposition:\s*inline/mi', $r['head']));
+check('日本語のファイル名が付く', str_contains($r['head'], rawurlencode('作業完了報告書_No' . $row['report_no'] . '.pdf')));
+check('1ページに収まる', substr_count($r['body'], '/Type /Page') - substr_count($r['body'], '/Type /Pages') === 1);
+check('日本語フォントを埋め込んでいる', str_contains($r['body'], 'IPAexGothic') || str_contains($r['body'], 'ipaexg'));
+$saved = Database::one('SELECT pdf_at, pdf_file FROM reports WHERE id = ?', [$id]);
+check('data/pdf に保存され、ファイル名が記録される',
+    $saved['pdf_file'] === 'report_' . $row['report_no'] . '.pdf' && is_file($pdfDir . '/' . $saved['pdf_file']));
+check('保存したファイルと返した内容が同じ', file_get_contents($pdfDir . '/' . $saved['pdf_file']) === $r['body']);
+$r = req('GET', "/report/{$id}/pdf?dl=1");
+check('?dl=1 なら保存の指定（attachment）', (bool) preg_match('/^content-disposition:\s*attachment/mi', $r['head']));
+
+// 分量がとても多いときも1ページに収まる
+Database::run('UPDATE reports SET report_body = ? WHERE id = ?', [
+    str_repeat("報告事項をとても長く書いた場合に、1枚に収めるため文字を小さくします。\n", 30), $id,
+]);
+$heavyPdf = req('GET', "/report/{$id}/pdf")['body'];
+check('報告事項が非常に多くても1ページ',
+    substr_count($heavyPdf, '/Type /Page') - substr_count($heavyPdf, '/Type /Pages') === 1);
+Database::run('UPDATE reports SET report_body = ? WHERE id = ?', [$keep, $id]);
+
 // ---------------------------------------------------------------- 2-10
 echo "--- 2-10 メール送信 ---\n";
 $r = req('GET', "/report/{$id}/mail");
 check('画面が出る', $r['status'] === 200);
 check('件名の既定値が入っている', str_contains($r['body'], (string) config('mail.default_subject')));
 check('報告書を横に並べている', str_contains($r['body'], "src=\"/report/{$id}/sheet\""));
+check('添付されるPDFを開ける', str_contains($r['body'], "href=\"/report/{$id}/pdf\""));
+check('件名にもマイク入力が付く', (bool) preg_match('/name="subject"[^>]*data-mic="1"/s', $r['body']));
 
 // 送信履歴があるものは前回の文面を引き継ぐ。たたき台は履歴のない報告書で見る
 $virgin = Database::one(
@@ -224,6 +254,35 @@ check('送信内容が記録される',
 $last = Database::one('SELECT * FROM mail_logs WHERE report_id = ? ORDER BY id DESC', [$id]);
 check('CCが複数保存される', str_contains((string) $last['cc_addr'], 'kachou@example.co.jp'),
     (string) $last['cc_addr']);
+check('添付したPDFが日時付きで残る',
+    (bool) preg_match('/^report_\d+_\d{8}_\d{6}\.pdf$/', (string) $last['attachment'])
+    && is_file($pdfDir . '/' . $last['attachment']), (string) $last['attachment']);
+check('残したPDFは本物', str_starts_with((string) file_get_contents($pdfDir . '/' . $last['attachment']), '%PDF-'));
+$emls = glob((string) config('storage.tmp') . '/mail/*.eml') ?: [];
+usort($emls, fn($a, $b) => filemtime($b) <=> filemtime($a));
+check('dry_run では送るはずだった内容を .eml に残す', $emls !== [] && time() - filemtime($emls[0]) < 120);
+if ($emls) {
+    $eml = (string) file_get_contents($emls[0]);
+    check('.eml に宛先・CC・件名・添付が入っている',
+        str_contains($eml, 'To: setsubi@example-hospital.jp')
+        && str_contains($eml, 'Cc: jimu@example.co.jp, kachou@example.co.jp')
+        && str_contains($eml, 'Subject: =?UTF-8?B?' . base64_encode('作業完了報告書') . '?=')
+        && str_contains($eml, 'Content-Type: application/pdf')
+        && str_contains($eml, "filename*=UTF-8''" . rawurlencode('作業完了報告書_No' . $row['report_no'] . '.pdf')));
+    check('.eml の添付を戻すと残したPDFと一致する', (function () use ($eml, $pdfDir, $last) {
+        // 添付パートのヘッダの終わり（空行）から、閉じ boundary の手前までが base64
+        $start = strpos($eml, 'Content-Type: application/pdf');
+        $start = $start === false ? false : strpos($eml, "\r\n\r\n", $start);
+        $end   = $start === false ? false : strpos($eml, "\r\n--", $start);
+        if ($start === false || $end === false) {
+            return false;
+        }
+        $b64 = preg_replace('/\s+/', '', substr($eml, $start, $end - $start));
+        return base64_decode((string) $b64, true) === file_get_contents($pdfDir . '/' . $last['attachment']);
+    })());
+    check('返信先は協力会社のメール',
+        str_contains($eml, 'Reply-To: ' . (string) Database::value('SELECT email FROM accounts WHERE id = 1')));
+}
 check('次に開くと前回の宛先が入っている',
     str_contains(req('GET', "/report/{$id}/mail")['body'], 'setsubi@example-hospital.jp'));
 
@@ -231,7 +290,7 @@ check('次に開くと前回の宛先が入っている',
 echo "--- 他社の報告書は出力できないか ---\n";
 @unlink($JAR);
 req('POST', '/login', ['_csrf' => csrf('/login'), 'login_id' => 'ABCDE0002', 'password' => 'pass1234']);
-foreach (['sheet', 'preview', 'print', 'mail', 'done'] as $p) {
+foreach (['sheet', 'pdf', 'preview', 'print', 'mail', 'done'] as $p) {
     check("/{$p} は404", req('GET', "/report/{$id}/{$p}")['status'] === 404);
 }
 

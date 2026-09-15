@@ -43,7 +43,8 @@ $router->post('/report/{id}/signature/delete', $controller('report', 'report_del
 
 // ---- 完了・出力（2-7〜2-10） ----------------------------------
 $router->get('/report/{id}/done',    $controller('report_output', 'report_done'));     // 2-7
-$router->get('/report/{id}/sheet',   $controller('report_output', 'report_sheet'));    // A4本体
+$router->get('/report/{id}/sheet',   $controller('report_output', 'report_sheet'));    // A4本体（画面用）
+$router->get('/report/{id}/pdf',     $controller('report_output', 'report_pdf'));      // PDF（保存・添付と同じもの）
 $router->get('/report/{id}/preview', $controller('report_output', 'report_preview'));  // 2-8
 $router->get('/report/{id}/print',   $controller('report_output', 'report_print'));    // 2-9
 $router->any('/report/{id}/mail',    $controller('report_output', 'report_mail'));     // 2-10
@@ -67,6 +68,7 @@ $router->any('/report/{id}/internal/sales',    $controller('internal', 'internal
 $router->get('/report/{id}/internal/confirm',  $controller('internal', 'internal_confirm')); // 4-6
 $router->post('/report/{id}/internal/complete', $controller('internal', 'internal_complete'));
 $router->get('/report/{id}/internal/sheet',    $controller('internal', 'internal_sheet'));
+$router->get('/report/{id}/internal/pdf',      $controller('internal', 'internal_pdf'));
 $router->get('/report/{id}/internal/preview',  $controller('internal', 'internal_preview')); // 4-7
 $router->get('/report/{id}/internal/print',    $controller('internal', 'internal_print'));   // 4-8
 
@@ -81,6 +83,8 @@ $router->post('/admin/logout',    $controller('admin_auth', 'admin_logout_action
 $router->get('/admin/dashboard', $controller('admin_dashboard', 'admin_dashboard'));
 $router->get('/admin/report/{id}/sheet',          $controller('admin_dashboard', 'admin_report_sheet'));
 $router->get('/admin/report/{id}/internal-sheet', $controller('admin_dashboard', 'admin_internal_sheet'));
+$router->get('/admin/report/{id}/pdf',            $controller('admin_dashboard', 'admin_report_pdf'));
+$router->get('/admin/report/{id}/internal-pdf',   $controller('admin_dashboard', 'admin_internal_pdf'));
 $router->get('/admin/report/{id}/signature.png',  $controller('admin_dashboard', 'admin_signature_image'));
 
 // K-3 ユーザー登録（アカウント発行・ロック解除）

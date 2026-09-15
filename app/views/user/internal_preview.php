@@ -28,11 +28,15 @@ $src     = "/report/{$id}/internal/sheet" . ($isPrint ? '?print=1' : '');
 
   <div class="paper-bar">
     <span>社内用　No.<?= (int) $report['report_no'] ?>　<?= h((string) $report['hospital_name']) ?></span>
+    <span class="paper-bar__actions">
+      <a class="btn btn--sm btn--ghost" href="/report/<?= $id ?>/internal/pdf" target="_blank" rel="noopener">PDFで開く</a>
+      <a class="btn btn--sm btn--ghost" href="/report/<?= $id ?>/internal/pdf?dl=1">PDFを保存</a>
 <?php if ($isPrint): ?>
-    <button class="btn btn--sm" type="button" id="js-reprint">もう一度印刷</button>
+      <button class="btn btn--sm" type="button" id="js-reprint">もう一度印刷</button>
 <?php else: ?>
-    <a class="btn btn--sm" href="/report/<?= $id ?>/internal/print">印刷する</a>
+      <a class="btn btn--sm" href="/report/<?= $id ?>/internal/print">印刷する</a>
 <?php endif; ?>
+    </span>
   </div>
 
   <div class="paper-stage">

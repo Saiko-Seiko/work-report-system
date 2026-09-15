@@ -73,7 +73,7 @@ function admin_dashboard(): void
 
 // ================================================================ 報告書の表示
 
-/** 客先提出用のA4（K-2 の「PDF ●」） */
+/** 客先提出用のA4（画面用HTML。印刷ダイアログ付きで開ける） */
 function admin_report_sheet(array $p): void
 {
     Auth::requireAdmin();
@@ -88,7 +88,7 @@ function admin_report_sheet(array $p): void
     ]);
 }
 
-/** 社内用のA4（K-2 の「社内用 ●」） */
+/** 社内用のA4（画面用HTML） */
 function admin_internal_sheet(array $p): void
 {
     Auth::requireAdmin();
@@ -104,6 +104,32 @@ function admin_internal_sheet(array $p): void
         'report'   => $report,
         'forPrint' => query('print') === '1',
     ]);
+}
+
+/** 客先提出用のPDF（K-2 の「PDF ●」）。利用者が出すものと同じ1枚 */
+function admin_report_pdf(array $p): void
+{
+    Auth::requireAdmin();
+    $report = admin_find_report((int) $p['id']);
+
+    Pdf::send(Pdf::forReport($report), Pdf::fileName('report', $report), query('dl') === '1',
+        Pdf::fileName('report', $report, true));
+}
+
+/** 社内用のPDF（K-2 の「社内用 ●」） */
+function admin_internal_pdf(array $p): void
+{
+    Auth::requireAdmin();
+    $report   = admin_find_report((int) $p['id']);
+    $internal = Database::one('SELECT * FROM internal_reports WHERE report_id = ?', [$report['id']]);
+
+    if (!$internal) {
+        render_error(404, 'この報告書の社内用はまだ作成されていません。');
+        exit;
+    }
+
+    Pdf::send(Pdf::forInternal($report, $internal), Pdf::fileName('internal', $report), query('dl') === '1',
+        Pdf::fileName('internal', $report, true));
 }
 
 /** サイン画像。管理者もログイン確認を通してから配信する */

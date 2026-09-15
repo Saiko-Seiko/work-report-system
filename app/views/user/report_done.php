@@ -43,8 +43,13 @@ $submitted = !empty($report['submitted_at']);
     </a>
   </li>
   <li>
+    <a href="/report/<?= $id ?>/pdf?dl=1">
+      <span>PDFを保存<small>報告書のPDFファイルをこの端末に保存します</small></span>
+    </a>
+  </li>
+  <li>
     <a href="/report/<?= $id ?>/mail">
-      <span>メール送信<small>任意のアドレスに報告書を送ります</small></span>
+      <span>メール送信<small>任意のアドレスに報告書のPDFを添付して送ります</small></span>
     </a>
   </li>
 </ul>

@@ -753,6 +753,7 @@ html, body {
   color: var(--ink-mid);
 }
 
+.paper-bar__actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .paper-stage { padding: 12px 0 28px; background: #6d7570; }
 .paper-frame {
   display: block;

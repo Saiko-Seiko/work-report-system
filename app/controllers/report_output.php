@@ -2,9 +2,9 @@
 /**
  * 2-7 完了 / 2-8 プレビュー / 2-9 印刷 / 2-10 メール送信
  *
- * 用紙（A4）は app/views/sheet/report.php の1枚だけ。
- * プレビューも印刷もメール添付も、すべてそれを使い回す。
- * 本番でPDFにするときは、同じHTMLを mPDF に渡せばよい。
+ * 画面で見る用紙（A4）は app/views/sheet/report.php、PDF は app/views/pdf/report.php。
+ * 同じデータ（Report::sheetData）から作るので、画面と PDF の中身は常に一致する。
+ * 保存・メール添付は必ず PDF（Pdf::forReport）で行う。
  */
 declare(strict_types=1);
 
@@ -48,6 +48,32 @@ function report_sheet(array $p): void
         'density'  => Report::sheetDensity($data),
         'forPrint' => query('print') === '1',
     ]);
+}
+
+// ================================================================ PDF
+
+/**
+ * 本物のPDF。プレビューの「PDFで開く」「PDFを保存」、一覧の●、メール添付がこれ。
+ *   /report/{id}/pdf        → ブラウザで表示
+ *   /report/{id}/pdf?dl=1   → ファイルとして保存
+ * 作るたびに data/pdf/report_{No}.pdf を最新の内容で書き換える。
+ */
+function report_pdf(array $p): void
+{
+    $user   = Auth::requireUser();
+    $report = Report::findOwned((int) $p['id'], $user);
+    $id     = (int) $report['id'];
+
+    $bytes = Pdf::forReport($report);
+    $file  = Pdf::store($bytes, 'report', (int) $report['report_no']);
+
+    Report::touch($id, [
+        'pdf_at'   => $report['pdf_at'] ?: now(),
+        'pdf_file' => $file,
+    ]);
+    audit('report_pdf', 'reports:' . $id, $file);
+
+    Pdf::send($bytes, Pdf::fileName('report', $report), query('dl') === '1', Pdf::fileName('report', $report, true));
 }
 
 // ================================================================ 2-8 プレビュー
@@ -112,25 +138,48 @@ function report_mail(array $p): void
         $errors = report_validate_mail($form);
 
         if (!$errors) {
-            Database::insert('mail_logs', [
-                'report_id'  => $id,
-                'kind'       => 'report',
-                'to_addr'    => mb_substr($form['to'], 0, 255),
-                'cc_addr'    => mb_substr($form['cc'], 0, 512),
-                'subject'    => mb_substr($form['subject'], 0, 255),
-                'body'       => mb_substr($form['body'], 0, 8000),
-                'is_dry_run' => config('mail.dry_run') ? 1 : 0,
-                'sent_at'    => now(),
+            // 送った内容の控えとして、PDFは日時付きで残す（後から「何を送ったか」を確かめられる）
+            $bytes = Pdf::forReport($report);
+            $file  = Pdf::store($bytes, 'report', (int) $report['report_no'], true);
+
+            $failed = Mailer::send([
+                'to'          => $form['to'],
+                'cc'          => report_split_addresses($form['cc']),
+                'reply_to'    => (string) $user['email'],
+                'subject'     => $form['subject'],
+                'body'        => $form['body'],
+                'attachments' => [[
+                    'name'  => Pdf::fileName('report', $report),
+                    'bytes' => $bytes,
+                    'type'  => 'application/pdf',
+                ]],
             ]);
 
-            Report::touch($id, [
-                'mail_count' => (int) $report['mail_count'] + 1,
-                'pdf_at'     => $report['pdf_at'] ?: now(),
-            ]);
+            if ($failed !== null) {
+                $errors['send'] = $failed . ' 時間をおいてもう一度お試しください。';
+            } else {
+                Database::insert('mail_logs', [
+                    'report_id'  => $id,
+                    'kind'       => 'report',
+                    'to_addr'    => mb_substr($form['to'], 0, 255),
+                    'cc_addr'    => mb_substr($form['cc'], 0, 512),
+                    'subject'    => mb_substr($form['subject'], 0, 255),
+                    'body'       => mb_substr($form['body'], 0, 8000),
+                    'attachment' => $file,
+                    'is_dry_run' => config('mail.dry_run') ? 1 : 0,
+                    'sent_at'    => now(),
+                ]);
 
-            audit('report_mailed', 'reports:' . $id, $form['to']);
-            $sent   = true;
-            $report = Report::findOwned($id, $user);
+                Report::touch($id, [
+                    'mail_count' => (int) $report['mail_count'] + 1,
+                    'pdf_at'     => $report['pdf_at'] ?: now(),
+                    'pdf_file'   => $file,
+                ]);
+
+                audit('report_mailed', 'reports:' . $id, $form['to'] . ' ' . $file);
+                $sent   = true;
+                $report = Report::findOwned($id, $user);
+            }
         }
     }
 

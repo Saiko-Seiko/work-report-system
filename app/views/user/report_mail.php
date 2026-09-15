@@ -31,6 +31,7 @@ $id = (int) $report['id'];
               title="送信する作業完了報告書"></iframe>
       <p class="muted" style="font-size:12.5px; margin:8px 0 0">
         この内容をPDFにして添付します。
+        <a href="/report/<?= $id ?>/pdf" target="_blank" rel="noopener" style="color:#fff">添付されるPDFを見る</a>
       </p>
     </div>
 
@@ -56,7 +57,8 @@ $id = (int) $report['id'];
 
         <label class="block-label" for="subject">件名<span class="req">*</span></label>
         <input class="input <?= isset($errors['subject']) ? 'is-error' : '' ?>"
-               type="text" id="subject" name="subject" value="<?= h($form['subject']) ?>">
+               type="text" id="subject" name="subject" value="<?= h($form['subject']) ?>"
+               data-mic="1">
 
         <label class="block-label" for="cc">CC</label>
         <input class="input <?= isset($errors['cc']) ? 'is-error' : '' ?>"
@@ -89,8 +91,8 @@ $id = (int) $report['id'];
     <p class="dialog__message">送信しました</p>
 <?php if (config('mail.dry_run')): ?>
     <p class="dialog__sub">
-      ※このプロトタイプでは実際の配信は行わず、送信内容（宛先・件名・本文）を記録しています。
-      本番ではさくらのSMTPからPDFを添付して送信します。
+      ※このデモでは実際の配信は行わず、送信内容（宛先・件名・本文・添付PDF）を記録しています。
+      本番ではさくらのサーバーからPDFを添付して送信します。
     </p>
 <?php endif; ?>
     <p style="text-align:center; margin:16px 0 0">

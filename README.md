@@ -3,10 +3,10 @@
 病院設備の保守点検報告書を、現場のタブレットから入力してPDFまで出すシステム。
 概要書（全26ページ）の画面番号をそのまま実装の単位にしている。
 
-**概要書の35画面すべてが動きます。**
+**概要書の35画面すべてが動き、PDF出力・メール添付・Excel入出力まで含めて仕様どおりに動きます。**
 
 - 現場（タブレット 768×1024）：1-1〜5-3 の24画面
-- 事務局（PC 1600×900）：K-1〜K-7 の11画面
+- 事務局（PC 1600×900）：K-1〜K-7 の11画面 ＋ K-8 確認事項マスタ
 
 ---
 
@@ -15,8 +15,10 @@
 本番環境が **さくらのレンタルサーバ「ビジネス」** という制約から、次の方針で作っている。
 
 - **PHP + PDO + 素のJavaScript のみ**。Composer / Node / ビルド工程なし → FTPで上げれば動く
-- DBは **本番 MySQL / 開発 SQLite** を同じ `app/schema/schema.sql` から作る（`{{PK}}` `{{TAIL}}` をドライバごとに置換）
-- PDFは **A4のHTML/CSSを1枚だけ持つ**。プレビューも印刷も本番のPDFも同じ型紙を使う
+- DBは **本番 MySQL / 開発 SQLite** を同じ `app/schema/schema.sql` から作る（`{{PK}}` `{{TAIL}}` をドライバごとに置換）。MySQL（MariaDB 12.3）でも通し試験 422 本すべて通ることを確認済み
+- PDFは **TCPDF を同梱**（`app/vendor/tcpdf`、IPAexフォント埋め込み）。画面のA4（HTML/CSS）と同じデータから作るので見た目がずれない
+- Excel（.xlsx）の読み書きは `app/lib/Xlsx.php`（zip 拡張だけ）。PhpSpreadsheet は不要
+- メールは PHP の `mail()` に MIME を組んで PDF を添付（`app/lib/Mailer.php`）。さくらの sendmail でそのまま送れる
 - 依存ライブラリを足さないので、共用サーバーで「動かない」が起きにくい
 
 ---
@@ -77,10 +79,11 @@ app/               → ~/www の外に置く（Web公開しない）
   config.php         設定（config.local.php で上書き）
   routes.php         URL定義
   schema/schema.sql  スキーマ（MySQL/SQLite共用）
-  lib/               Database / Router / Auth / Report / InternalReport / Sync
-  views/             レイアウトと画面（sheet/ がA4の型紙）
+  lib/               Database / Router / Auth / Report / InternalReport / Sync / Pdf / Mailer / Xlsx
+  views/             レイアウトと画面（sheet/ が画面用A4、pdf/ がPDFの型紙）
+  vendor/tcpdf/      TCPDF 6.11.4 と IPAex フォント（同梱。Composer 不要）
   controllers/
-data/              → SQLite・署名画像・PDF・控え（Web公開しない）
+data/              → SQLite・署名画像・PDF・控え・dry_run のメール（Web公開しない）
 tools/             → migrate.php / seed.php / preflight.php
 tests/             → 通し試験（run.php でまとめて実行）
 docs/              → deploy.md（設置手順）/ demo.md（デモの進めかた）
@@ -107,11 +110,20 @@ docs/              → deploy.md（設置手順）/ demo.md（デモの進めか
 
 ### PDF
 
-`app/views/sheet/report.php`（客先提出用）と `sheet/internal.php`（社内用）の2枚が型紙。
-`public/assets/css/sheet.css` が A4（210×297mm）の体裁を持つ。
+本物のPDFは `app/lib/Pdf.php`（TCPDF）が `app/views/pdf/report.php`・`pdf/internal.php` の型紙から作る。
 
-載る量に応じて `d1 / d2 / d3` の3段階で文字を詰め、1枚に収める。
-プレビューのURLに `?guide=1` を付けると、1枚目の境目に赤い線が出る。
+| URL | 内容 |
+|---|---|
+| `/report/{id}/pdf` | 客先提出用PDF（`?dl=1` で保存。作るたび `data/pdf/report_{No}.pdf` を更新） |
+| `/report/{id}/internal/pdf` | 社内用PDF（同様に `internal_{No}.pdf`） |
+| `/admin/report/{id}/pdf`・`/internal-pdf` | 管理者用（K-2 の●） |
+
+メール送信（2-10）はこのPDFを添付し、送った分は `report_{No}_{日時}.pdf` として残す（`mail_logs.attachment`）。
+`mail.dry_run = true` のときは配信せず `data/tmp/mail/*.eml` に送るはずだった内容を残す。
+
+画面で見るA4は `app/views/sheet/report.php`・`sheet/internal.php`（HTML/CSS、`sheet.css` が 210×297mm）。
+どちらも同じ `Report::sheetData()` から作る。載る量に応じて `d1 / d2 / d3` の3段階で文字を詰め、1枚に収める
+（報告事項を30行に増やしてもPDFは1ページに収まることを試験で確認）。
 
 ### 概要書から変えたところ
 
@@ -119,7 +131,8 @@ docs/              → deploy.md（設置手順）/ demo.md（デモの進めか
 |---|---|---|---|
 | ID/パスワード保持 | パスワードを保持 | 使い捨ての合鍵をCookieに置く | 紛失時に他病院の報告書まで見られないように |
 | 交換部品マスタの取込 | 書き込む前にDBをクリア | 部品名を鍵にした差分反映＋自動バックアップ | ファイル1つの間違いで1万件消えるのを防ぐ／過去の報告書との紐付けを保つ |
-| PDF生成 | Excelテンプレートに流し込む | 同じ体裁をHTML/CSSで再現 | 共用サーバーに変換ソフトを置けない |
+| PDF生成 | Excelテンプレートに流し込む | 同じ体裁を TCPDF（同梱）で描く | 共用サーバーに Excel→PDF の変換ソフトを置けない。フォント埋め込みで見た目が端末に依らない |
+| 確認事項の文言 | 3〜5 が未定 | K-8 確認事項マスタで事務局が直せる | 文言が決まったあとも改修なしで変えられる |
 | マスタの削除 | （記載なし） | 消さずに隠す | 過去の報告書に載っている名前を残すため |
 | 交換部品・作業者・機種名 | （記載なし） | ヨミガナ列を追加 | これが無いと50音順に並ばない |
 
@@ -138,11 +151,15 @@ php tests/run.php admin   1本だけ
 |---|---|---|
 | `wizard` | 報告書作成 2-1〜2-6 | 36 |
 | `sync` | オフライン・再送（op_id） | 23 |
-| `output` | 完了・A4・印刷・メール | 60 |
+| `output` | 完了・A4・PDF・印刷・メール添付 | 81 |
 | `list` | 一覧・マイページ | 71 |
-| `internal` | 社内用報告書 4-1〜4-8 | 81 |
-| `admin` | 管理者サイト K-1〜K-7 | 100 |
-| | **合計** | **371** |
+| `internal` | 社内用報告書 4-1〜4-8（PDF含む） | 87 |
+| `admin` | 管理者サイト K-1〜K-8（Excel入出力含む） | 124 |
+| | **合計** | **422** |
+
+SQLite・MySQL（MariaDB 12.3）の両方で全件通過。PDF は実際に描画して1ページに収まること、
+メールは試験用の SMTP サーバーに実際に送って添付が同一バイトで届くこと、
+Excel は実際の Excel で開けること・Excel が保存したファイルを読めることを確認している。
 
 ---
 
@@ -171,8 +188,9 @@ php tools/preflight.php
 | 5 | 完了・プレビュー・印刷・メール送信（A4再現） | 完了 |
 | 6 | 報告書一覧・マイページ（3／5-1〜5-3） | 完了 |
 | 7 | 社内用報告書（4-1〜4-8） | 完了 |
-| 8 | 管理者サイト（K-1〜K-7／CSV入出力） | 完了 |
+| 8 | 管理者サイト（K-1〜K-7／Excel・CSV入出力） | 完了 |
 | 9 | デモ台本・デプロイ手順・試験の整備 | 完了 |
+| 10 | 本物のPDF（TCPDF）・メール添付・Excel入出力・K-8 確認事項マスタ・MySQL通し試験 | 完了 |
 
 ---
 

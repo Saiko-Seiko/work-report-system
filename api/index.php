@@ -23,7 +23,7 @@ if ($path === '/_check') {
     echo "SAPI         : " . PHP_SAPI . "\n";
     echo "実行場所      : " . APP_ROOT . "\n\n";
 
-    foreach (['pdo', 'pdo_sqlite', 'mbstring', 'json', 'session', 'gd'] as $ext) {
+    foreach (['pdo', 'pdo_sqlite', 'mbstring', 'json', 'session', 'gd', 'zlib', 'zip', 'dom', 'xmlreader'] as $ext) {
         printf("拡張 %-12s : %s\n", $ext, extension_loaded($ext) ? 'あり' : '★なし');
     }
 

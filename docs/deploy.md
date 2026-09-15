@@ -62,9 +62,9 @@ FTP（または SCP）で次のように配置します。**`app/` と `data/` �
 ```
 data/
 data/signatures/    サイン画像
-data/pdf/           PDFの保存先
-data/backups/       部品マスタ取り込み前の控え
-data/tmp/           取り込み待ちの一時ファイル
+data/pdf/           PDFの保存先（report_{No}.pdf が最新、メールで送った分は日時付き）
+data/backups/       部品マスタ取り込み前の控え（.xlsx）
+data/tmp/           取り込み待ちの一時ファイル。dry_run 中のメールは tmp/mail/*.eml
 ```
 
 ---
@@ -90,11 +90,19 @@ return [
     'debug' => false,                    // 本番では必ず false
 
     'mail' => [
-        'from_address' => 'noreply@xxxxxx.sakura.ne.jp',
-        'dry_run'      => false,         // 実際に送るなら false
+        'from_name'    => '株式会社アイソテック',
+        'from_address' => 'noreply@xxxxxx.sakura.ne.jp',   // さくらで作ったメールアドレス
+        'dry_run'      => false,         // 実際に送るなら false（true の間は送らず .eml を残す）
     ],
 ];
 ```
+
+> **メールについて**
+> PHP の `mail()` をそのまま使うので、さくらでは追加の設定なしに送れます。
+> 差出人（`from_address`）は **さくらのコントロールパネルで作ったメールアドレス** にしてください。
+> 外部ドメインのアドレスを差出人にすると、迷惑メール扱いになることがあります。
+> 返信先（Reply-To）には協力会社のメールアドレスが自動で入ります。
+> PDF は本文と一緒に添付されます（1通あたり 250KB 前後）。
 
 `app/config.php` の自社情報（報告書の右上に入ります）も直します。
 
@@ -232,7 +240,8 @@ Service Worker を直したときは `public/sw.js` の `CACHE = 'wcr-v2'` の�
 |---|---|
 | データベース | コントロールパネルの phpMyAdmin からエクスポート（月1回程度） |
 | サイン画像 | `data/signatures/` を FTP でダウンロード |
-| 部品マスタ | 管理者サイトの「ダウンロード」でいつでもCSVに出せます |
+| 部品マスタ | 管理者サイトの「Excelでダウンロード」でいつでも .xlsx に出せます（CSV も可） |
+| 報告書のPDF | `data/pdf/` を FTP でダウンロード（送信した分は日時付きで残っています） |
 
 交換部品マスタの取り込み前の控えは `data/backups/` に自動で残ります。
 溜まってきたら古いものを消して構いません。
@@ -248,5 +257,7 @@ Service Worker を直したときは `public/sw.js` の `CACHE = 'wcr-v2'` の�
 | サインが保存できない | `data/signatures/` の書き込み権限 |
 | マイクのボタンが出ない | HTTPSになっているか。iPadのSafariは非対応（キーボードのマイクをご案内する画面が出ます） |
 | 圏外で画面が開かない | HTTPSになっているか。一度オンラインで各画面を開くと端末に取り込まれます |
-| PDFの文字が大きすぎ／小さすぎ | `public/assets/css/sheet.css` の `.sheet.d1/d2/d3` の `--sheet-font` |
-| メールが届かない | `mail.dry_run` が false か。`mail_logs` テーブルに送信記録が残ります |
+| PDFの文字が大きすぎ／小さすぎ | PDF は `app/views/pdf/report.php` の `$fs`（d1/d2/d3）、画面のA4は `public/assets/css/sheet.css` の `--sheet-font` |
+| PDFが真っ白・エラー | `data/pdf/` の書き込み権限。`php tools/preflight.php` で zlib / gd の有無も確認できます |
+| メールが届かない | `mail.dry_run` が false か。`mail_logs` テーブルに送信記録（添付ファイル名も）が残ります。差出人がさくらのアドレスか |
+| Excel の取り込みで「読めません」 | 「Excel ブック（.xlsx）」で保存し直す。古い .xls は非対応（CSV なら可） |
